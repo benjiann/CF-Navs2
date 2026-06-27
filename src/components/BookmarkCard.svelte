@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Bookmark, CardStyle } from '../../shared/types'
+  import { logoSurfIcon } from '../lib/icons'
 
   type AsyncVoid<T = void> = T | Promise<T>
 
@@ -26,6 +27,7 @@
 
   // 图标来源：有 URL 时优先加载；失败时尝试缓存；再失败用首字母
   $: iconUrl = (() => {
+    if (bookmark.icon_source === 'logo_surf') return logoSurfIcon(bookmark.title, bookmark.url)
     if (!bookmark.icon) return ''
     if (useFallbackIcon) return `/api/icon/${bookmark.id}`
     return bookmark.icon

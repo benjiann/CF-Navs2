@@ -1,5 +1,4 @@
-// 图标获取方式辅助函数
-// 为指定书签（url + title）生成四种方式的候选图标 URL
+// Icon candidate helpers for bookmark URL + title.
 
 import type { IconSource } from '../../shared/types'
 
@@ -9,9 +8,34 @@ export type IconCandidate = {
   url: string
 }
 
-/**
- * 从 URL 中提取纯域名（不含协议 / 路径 / www）
- */
+export type LogoSurfColorScheme = {
+  name: string
+  bgColor: string
+  textColor: string
+}
+
+export const LOGO_SURF_COLOR_SCHEMES: LogoSurfColorScheme[] = [
+  { name: 'Deep Blue', bgColor: '#1a365d', textColor: '#ffffff' },
+  { name: 'Dark Gray & Orange', bgColor: '#2D3748', textColor: '#ED8936' },
+  { name: 'Brown & Yellow', bgColor: '#744210', textColor: '#F6E05E' },
+  { name: 'Almost Black & Sky Blue', bgColor: '#1A202C', textColor: '#63B3ED' },
+  { name: 'Purple & Yellow', bgColor: '#702459', textColor: '#FBBF24' },
+  { name: 'Dark Green & Light Green', bgColor: '#065F46', textColor: '#6EE7B7' },
+  { name: 'Indigo & Light Red', bgColor: '#3730A3', textColor: '#FCA5A5' },
+  { name: 'Black & Neon Green', bgColor: '#131516', textColor: '#70e000' },
+  { name: 'Red & White', bgColor: '#E53E3E', textColor: '#FFFFFF' },
+  { name: 'Blue & Light Blue', bgColor: '#2B6CB0', textColor: '#BEE3F8' },
+  { name: 'Dark Gray & Off White', bgColor: '#2D3748', textColor: '#F7FAFC' },
+  { name: 'Brown & Pale Yellow', bgColor: '#975A16', textColor: '#FEFCBF' },
+  { name: 'Green & Pale Green', bgColor: '#276749', textColor: '#C6F6D5' },
+  { name: 'Purple & Lavender', bgColor: '#6B46C1', textColor: '#E9D8FD' },
+  { name: 'Teal & Light Teal', bgColor: '#2C7A7B', textColor: '#81E6D9' },
+  { name: 'Burnt Orange & Peach', bgColor: '#9C4221', textColor: '#FEEBC8' },
+  { name: 'Bold Black & Yellow', bgColor: '#000000', textColor: '#FFA31A' },
+]
+
+export const DEFAULT_LOGO_SURF_SCHEME = LOGO_SURF_COLOR_SCHEMES[LOGO_SURF_COLOR_SCHEMES.length - 1]
+
 export function getHostname(url: string): string {
   try {
     const u = new URL(url)
@@ -21,37 +45,61 @@ export function getHostname(url: string): string {
   }
 }
 
-// ========== 四种方式 ==========
-
-/**
- * 方式1: 直接 favicon（由服务端 fetch-favicon 解析，返回完整 URL）
- */
 export function directIcon(url: string): string {
   return `/api/fetch-favicon?url=${encodeURIComponent(url)}`
 }
 
-/**
- * 方式2: favicon.im
- * 文档: https://favicon.im/  无需 API key，直接热链
- */
 export function faviconImIcon(url: string): string {
   const hostname = getHostname(url)
   return hostname ? `https://favicon.im/${hostname}?larger=true` : ''
 }
 
-/**
- * 方式3: 仿 logo.surf 文字图标
- * logo.surf 是一个纯浏览器端 SVG 生成工具，无公开 URL API，
- * 这里在本地生成一个带首字母的 SVG data URI，效果类似
- */
-export function logoSurfIcon(title: string, url: string): string {
-  const letter = title.trim().charAt(0).toUpperCase() || 'N'
-  const hostname = getHostname(url) || '?'
+function escapeSvgText(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
 
-  // 生成一个类似 logo.surf 风格的单字母圆角图标 SVG
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#2563eb"/>
-  <text x="32" y="41" text-anchor="middle" fill="#ffffff" font-size="32" font-weight="bold" font-family="Arial,Helvetica,sans-serif">${letter}</text>
+function estimateTextUnits(value: string): number {
+  let units = 0
+
+  for (const char of value) {
+    if (/\s/.test(char)) {
+      units += 0.35
+    } else if (/^[A-Za-z0-9]$/.test(char)) {
+      units += 0.62
+    } else if (/^[\u0000-\u00ff]$/.test(char)) {
+      units += 0.72
+    } else {
+      units += 1
+    }
+  }
+
+  return Math.max(1, units)
+}
+
+function getLogoTextFontSize(text: string, size: number): number {
+  const units = estimateTextUnits(text)
+  const isShort = [...text].length <= 2
+  const initialFontSize = isShort ? size * 0.8 : /^[A-Za-z0-9\s]+$/.test(text) ? size * 0.75 : size * 0.6
+  const maxWidth = size * 0.9
+  const fittedFontSize = maxWidth / units
+
+  return Math.max(1, Math.min(initialFontSize, fittedFontSize))
+}
+
+export function logoSurfIcon(title: string, url: string, scheme: LogoSurfColorScheme = DEFAULT_LOGO_SURF_SCHEME): string {
+  const hostname = getHostname(url) || 'NAV'
+  const text = title.trim() || hostname
+  const size = 512
+  const radius = 80
+  const fontSize = getLogoTextFontSize(text, size)
+  const safeText = escapeSvgText(text)
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  <rect width="${size}" height="${size}" rx="${radius}" ry="${radius}" fill="${scheme.bgColor}"/>
+  <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" fill="${scheme.textColor}" font-size="${fontSize.toFixed(2)}" font-weight="normal" font-family="Impact,ImpactFallback,Arial Black,Arial,Helvetica,sans-serif">${safeText}</text>
 </svg>`
 
   const encoded = encodeURIComponent(svg)
@@ -64,20 +112,11 @@ export function logoSurfIcon(title: string, url: string): string {
   return `data:image/svg+xml;charset=utf-8,${encoded}`
 }
 
-/**
- * 方式4: Google s2 favicons
- * 格式: https://www.google.com/s2/favicons?sz={size}&domain={domain}
- */
 export function googleIcon(url: string, size = 64): string {
   const hostname = getHostname(url)
   return hostname ? `https://www.google.com/s2/favicons?sz=${size}&domain=${encodeURIComponent(hostname)}` : ''
 }
 
-// ========== 聚合 ==========
-
-/**
- * 为给定的书签 URL + title 生成四种图标候选项
- */
 export function getIconCandidates(url: string, title: string): IconCandidate[] {
   const hostname = getHostname(url)
   if (!hostname) return []
@@ -85,7 +124,7 @@ export function getIconCandidates(url: string, title: string): IconCandidate[] {
   return [
     {
       source: 'direct',
-      label: '自动获取',
+      label: '\u81ea\u52a8\u83b7\u53d6',
       url: directIcon(url),
     },
     {
@@ -95,7 +134,7 @@ export function getIconCandidates(url: string, title: string): IconCandidate[] {
     },
     {
       source: 'logo_surf',
-      label: '文字图标',
+      label: '\u6587\u5b57\u56fe\u6807',
       url: logoSurfIcon(title, url),
     },
     {
