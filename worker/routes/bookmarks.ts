@@ -11,6 +11,7 @@ import {
   sortBookmarks,
   updateBookmark,
 } from '../lib/db'
+import { invalidatePublicDataCache } from '../lib/cache'
 import { fail, ok } from '../lib/response'
 import type { HonoEnv } from '../types'
 
@@ -100,6 +101,7 @@ bookmarksRoutes.post('/', async (c) => {
       waitUntil(c, cacheIconBlob(c, bookmark.id, bookmark.icon))
     }
 
+    invalidatePublicDataCache(c, c.req.url)
     return c.json(ok(bookmark))
   } catch {
     return c.json(fail(ErrCode.SERVER_ERROR, 'failed to create bookmark'))
@@ -148,6 +150,7 @@ bookmarksRoutes.put('/:id', async (c) => {
       waitUntil(c, cacheIconBlob(c, bookmark.id, bookmark.icon))
     }
 
+    invalidatePublicDataCache(c, c.req.url)
     return c.json(ok(bookmark))
   } catch {
     return c.json(fail(ErrCode.SERVER_ERROR, 'failed to update bookmark'))
@@ -161,6 +164,7 @@ bookmarksRoutes.delete('/:id', async (c) => {
   try {
     const deleted = await deleteBookmark(c.env.DB, id)
     if (!deleted) return c.json(fail(ErrCode.NOT_FOUND, 'bookmark not found'))
+    invalidatePublicDataCache(c, c.req.url)
     return c.json(ok(null))
   } catch {
     return c.json(fail(ErrCode.SERVER_ERROR, 'failed to delete bookmark'))
@@ -176,6 +180,7 @@ bookmarksRoutes.post('/sort', async (c) => {
 
   try {
     await sortBookmarks(c.env.DB, ids)
+    invalidatePublicDataCache(c, c.req.url)
     return c.json(ok(null))
   } catch {
     return c.json(fail(ErrCode.SERVER_ERROR, 'failed to sort bookmarks'))

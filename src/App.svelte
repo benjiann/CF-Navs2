@@ -7,6 +7,7 @@
     Category,
     CategoryUpsertReq,
     IconSource,
+    PublicData,
     PublicSettings,
     Settings,
   } from '../shared/types'
@@ -196,16 +197,46 @@
     return Boolean(get(authStore).session)
   }
 
-  async function refreshPublicData(): Promise<void> {
+  async function refreshPublicData(): Promise<PublicData | null> {
     if (get(configStore).data?.public_mode || isLoggedIn()) {
       try {
-        await publicStore.refresh()
+        return await publicStore.refresh()
       } catch (error) {
         rootError = getErrorMessage(error)
+        return null
       }
     } else {
       publicStore.reset()
+      return null
     }
+  }
+
+  function syncAdminListsFromPublic(data: PublicData | null): void {
+    if (!data || !isLoggedIn()) return
+    adminStore.setCategories(data.categories)
+    adminStore.setBookmarks(data.bookmarks)
+  }
+
+  async function refreshLoggedInData(): Promise<void> {
+    const [publicResult, settingsResult] = await Promise.allSettled([
+      publicStore.refresh(),
+      api.settings.get(),
+    ])
+
+    if (publicResult.status === 'fulfilled' && settingsResult.status === 'fulfilled') {
+      adminStore.replaceData({
+        categories: publicResult.value.categories,
+        bookmarks: publicResult.value.bookmarks,
+        settings: settingsResult.value,
+      })
+      return
+    }
+
+    throw publicResult.status === 'rejected'
+      ? publicResult.reason
+      : settingsResult.status === 'rejected'
+        ? settingsResult.reason
+        : new Error('failed to load admin data')
   }
 
   async function initializeApp(): Promise<void> {
@@ -228,15 +259,14 @@
 
     if (isLoggedIn()) {
       try {
-        await adminStore.refreshAll()
+        await refreshLoggedInData()
       } catch (error) {
         rootError = getErrorMessage(error)
       }
     } else {
       adminStore.reset()
+      await refreshPublicData()
     }
-
-    await refreshPublicData()
 
     currentView = get(configStore).data?.public_mode === false && !isLoggedIn() ? 'admin' : 'home'
     booting = false
@@ -323,8 +353,7 @@
       loginModalOpen = false
       rootError = ''
       await configStore.refresh()
-      await adminStore.refreshAll()
-      await refreshPublicData()
+      await refreshLoggedInData()
       currentView = 'admin'
     } catch {
       // authStore 已经记录错误
@@ -387,8 +416,7 @@
       }
 
       resetCategoryState()
-      await adminStore.refreshCategories()
-      await refreshPublicData()
+      syncAdminListsFromPublic(await refreshPublicData())
     } catch (error) {
       categoryError = getErrorMessage(error)
     } finally {
@@ -406,8 +434,7 @@
 
     try {
       await api.categories.remove(Number(category.id))
-      await adminStore.refreshAll()
-      await refreshPublicData()
+      syncAdminListsFromPublic(await refreshPublicData())
     } catch (error) {
       categoryError = getErrorMessage(error)
     } finally {
@@ -469,8 +496,7 @@
       }
 
       resetBookmarkState()
-      await adminStore.refreshBookmarks()
-      await refreshPublicData()
+      syncAdminListsFromPublic(await refreshPublicData())
     } catch (error) {
       bookmarkError = getErrorMessage(error)
     } finally {
@@ -489,8 +515,7 @@
     try {
       await api.bookmarks.remove(Number(bookmark.id))
       resetBookmarkState()
-      await adminStore.refreshBookmarks()
-      await refreshPublicData()
+      syncAdminListsFromPublic(await refreshPublicData())
     } catch (error) {
       bookmarkError = getErrorMessage(error)
     } finally {
@@ -503,8 +528,8 @@
     settingsError = ''
 
     try {
-      await api.settings.update(payload)
-      await adminStore.refreshSettings()
+      const settings = await api.settings.update(payload)
+      adminStore.setSettings(settings)
       await configStore.refresh()
       await refreshPublicData()
     } catch (error) {
@@ -519,8 +544,7 @@
 
     try {
       await api.categories.sort(ids.map((id) => Number(id)))
-      await adminStore.refreshCategories()
-      await refreshPublicData()
+      syncAdminListsFromPublic(await refreshPublicData())
     } catch (error) {
       categoryError = getErrorMessage(error)
     }
@@ -531,8 +555,7 @@
 
     try {
       await api.bookmarks.sort(ids.map((id) => Number(id)))
-      await adminStore.refreshBookmarks()
-      await refreshPublicData()
+      syncAdminListsFromPublic(await refreshPublicData())
     } catch (error) {
       bookmarkError = getErrorMessage(error)
     }
@@ -597,9 +620,8 @@
 
       const result = await api.data.importAll(prepared.payload)
 
-      await adminStore.refreshAll()
       await configStore.refresh()
-      await refreshPublicData()
+      await refreshLoggedInData()
       backupMessage = `导入成功：${result.categories} 个分类、${result.bookmarks} 个书签。`
     } catch (error) {
       backupError = getErrorMessage(error)

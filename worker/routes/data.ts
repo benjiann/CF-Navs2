@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import type { Context } from 'hono'
 import { ErrCode, type Bookmark, type Category, type ImportReq, type ImportResp } from '../../shared/types'
+import { invalidatePublicDataCache } from '../lib/cache'
 import { importData } from '../lib/db'
 import { fail, ok } from '../lib/response'
 import type { HonoEnv } from '../types'
@@ -89,6 +90,7 @@ dataRoutes.post('/import', async (c) => {
       bookmarks: body.bookmarks,
       settings: body.settings,
     })
+    invalidatePublicDataCache(c, c.req.url)
     return c.json(ok<ImportResp>(result))
   } catch {
     return c.json(fail(ErrCode.SERVER_ERROR, 'failed to import data'))

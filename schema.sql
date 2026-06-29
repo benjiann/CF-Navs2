@@ -27,7 +27,9 @@ CREATE TABLE IF NOT EXISTS bookmarks (
 
 CREATE INDEX IF NOT EXISTS idx_bookmarks_category ON bookmarks(category_id);
 CREATE INDEX IF NOT EXISTS idx_bookmarks_sort ON bookmarks(category_id, sort);
+CREATE INDEX IF NOT EXISTS idx_bookmarks_sort_global ON bookmarks(sort, id);
 CREATE INDEX IF NOT EXISTS idx_categories_sort ON categories(sort);
+CREATE INDEX IF NOT EXISTS idx_categories_sort_id ON categories(sort, id);
 
 -- 全局设置（key-value，避免频繁改表结构）
 CREATE TABLE IF NOT EXISTS settings (

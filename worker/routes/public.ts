@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import type { PublicData, PublicSettings, Settings, SiteConfig } from '../../shared/types'
-import { listBookmarks, listCategories, getSettings } from '../lib/db'
+import { cachePublicDataResponse, matchPublicDataCache } from '../lib/cache'
+import { getSettings, getSiteConfig, listBookmarks, listCategories } from '../lib/db'
 import { ok } from '../lib/response'
 import { publicOrAuth } from '../middleware/publicMode'
 import type { HonoEnv } from '../types'
@@ -34,19 +35,24 @@ function toPublicSettings(settings: Settings): PublicSettings {
 export const publicRoutes = new Hono<HonoEnv>()
 
 publicRoutes.get('/config', async (c) => {
-  const settings = await getSettings(c.env.DB)
-  const data: SiteConfig = {
-    site_title: settings.site_title,
-    public_mode: settings.public_mode,
-  }
-  return c.json(ok(data))
+  const data: SiteConfig = await getSiteConfig(c.env.DB)
+  return c.json(ok(data), 200, {
+    'Cache-Control': 'private, max-age=15',
+  })
 })
 
 publicRoutes.get('/public/data', publicOrAuth, async (c) => {
+  const publicSettings = c.get('publicSettings') ?? await getSettings(c.env.DB)
+  const canUsePublicCache = publicSettings.public_mode && !c.req.header('Authorization')
+  if (canUsePublicCache) {
+    const cached = await matchPublicDataCache(c.req.url)
+    if (cached) return cached
+  }
+
   const [categories, bookmarks, settings] = await Promise.all([
     listCategories(c.env.DB),
     listBookmarks(c.env.DB),
-    getSettings(c.env.DB),
+    Promise.resolve(publicSettings),
   ])
 
   const data: PublicData = {
@@ -55,7 +61,15 @@ publicRoutes.get('/public/data', publicOrAuth, async (c) => {
     settings: toPublicSettings(settings),
   }
 
-  return c.json(ok(data))
+  const response = c.json(ok(data), 200, {
+    'Cache-Control': canUsePublicCache ? 'public, max-age=30, s-maxage=120, stale-while-revalidate=300' : 'no-store',
+  })
+
+  if (canUsePublicCache) {
+    cachePublicDataResponse(c, c.req.url, response)
+  }
+
+  return response
 })
 
 export default publicRoutes

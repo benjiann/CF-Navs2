@@ -5,6 +5,7 @@ import type {
   Category,
   BookmarkUpsertReq,
   CategoryUpsertReq,
+  SiteConfig,
   Settings,
 } from '../../shared/types'
 
@@ -261,6 +262,34 @@ export async function getSettings(db: D1Database): Promise<Settings> {
   return out
 }
 
+export async function getSiteConfig(db: D1Database): Promise<SiteConfig> {
+  const { results } = await db
+    .prepare("SELECT key, value FROM settings WHERE key IN ('site_title', 'public_mode')")
+    .all<{ key: string; value: string | null }>()
+
+  const config: SiteConfig = {
+    site_title: DEFAULT_SETTINGS.site_title,
+    public_mode: DEFAULT_SETTINGS.public_mode,
+  }
+
+  for (const row of results ?? []) {
+    if (row.value == null) continue
+
+    try {
+      const value = JSON.parse(row.value) as unknown
+      if (row.key === 'site_title' && typeof value === 'string') {
+        config.site_title = value
+      } else if (row.key === 'public_mode' && typeof value === 'boolean') {
+        config.public_mode = value
+      }
+    } catch {
+      if (row.key === 'site_title') config.site_title = row.value
+    }
+  }
+
+  return config
+}
+
 // 读取任意单个内部 key（如 admin_password / admin_username），返回解析后的值
 export async function getSettingValue<T = unknown>(db: D1Database, key: string): Promise<T | null> {
   const row = await db.prepare('SELECT value FROM settings WHERE key = ?').bind(key).first<{ value: string | null }>()
@@ -390,6 +419,8 @@ export async function ensureSchema(db: D1Database): Promise<void> {
   if (!colNames.has("icon_background_color")) {
     stmts.push(db.prepare("ALTER TABLE bookmarks ADD COLUMN icon_background_color TEXT"))
   }
+  stmts.push(db.prepare("CREATE INDEX IF NOT EXISTS idx_bookmarks_sort_global ON bookmarks(sort, id)"))
+  stmts.push(db.prepare("CREATE INDEX IF NOT EXISTS idx_categories_sort_id ON categories(sort, id)"))
 
   if (stmts.length > 0) await db.batch(stmts)
 }

@@ -7,6 +7,7 @@ import { extractBearerToken, validateSession } from './auth'
 
 export const publicOrAuth: MiddlewareHandler<HonoEnv> = async (c, next) => {
   const settings = await getSettings(c.env.DB)
+  c.set('publicSettings', settings)
   if (settings.public_mode) {
     await next()
     return

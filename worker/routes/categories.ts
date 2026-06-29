@@ -8,6 +8,7 @@ import {
   sortCategories,
   updateCategory,
 } from '../lib/db'
+import { invalidatePublicDataCache } from '../lib/cache'
 import { fail, ok } from '../lib/response'
 import type { HonoEnv } from '../types'
 
@@ -59,6 +60,7 @@ categoriesRoutes.post('/', async (c) => {
       title: body.title.trim(),
       icon: body.icon ?? null,
     })
+    invalidatePublicDataCache(c, c.req.url)
     return c.json(ok(category))
   } catch {
     return c.json(fail(ErrCode.SERVER_ERROR, 'failed to create category'))
@@ -80,6 +82,7 @@ categoriesRoutes.put('/:id', async (c) => {
       icon: body.icon ?? null,
     })
     if (!category) return c.json(fail(ErrCode.NOT_FOUND, 'category not found'))
+    invalidatePublicDataCache(c, c.req.url)
     return c.json(ok(category))
   } catch {
     return c.json(fail(ErrCode.SERVER_ERROR, 'failed to update category'))
@@ -93,6 +96,7 @@ categoriesRoutes.delete('/:id', async (c) => {
   try {
     const deleted = await deleteCategory(c.env.DB, id)
     if (!deleted) return c.json(fail(ErrCode.NOT_FOUND, 'category not found'))
+    invalidatePublicDataCache(c, c.req.url)
     return c.json(ok(null))
   } catch {
     return c.json(fail(ErrCode.SERVER_ERROR, 'failed to delete category'))
@@ -108,6 +112,7 @@ categoriesRoutes.post('/sort', async (c) => {
 
   try {
     await sortCategories(c.env.DB, ids)
+    invalidatePublicDataCache(c, c.req.url)
     return c.json(ok(null))
   } catch {
     return c.json(fail(ErrCode.SERVER_ERROR, 'failed to sort categories'))

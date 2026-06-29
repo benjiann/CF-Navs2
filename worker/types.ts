@@ -14,6 +14,7 @@ export interface Env {
 // Hono context.set/get 的类型
 export interface Variables {
   username: string
+  publicSettings: import('../shared/types').Settings
 }
 
 // Hono 泛型环境别名

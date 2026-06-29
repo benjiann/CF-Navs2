@@ -211,6 +211,10 @@ HTTP(S) 书签图标不会在首页直接请求原始外站地址，而是优先
 
 Iconify 图标使用 `https://api.iconify.design/{set}/{name}.svg`，可在新增/编辑书签时填写 `mdi:home`、`simple-icons:github` 这类图标名。Service Worker 会对 `/api/icon/*`、`/api/category-icon/*` 和 Iconify SVG 使用 cache-first 策略；后台修改书签、配置或首页搜索筛选导致组件重新渲染时，仍优先读取本地缓存。部署新版后如浏览器仍使用旧逻辑，请强制刷新一次页面，让新版 Service Worker 激活。
 
+### 访问性能
+
+前台公开聚合接口 `/api/public/data` 会复用公开模式鉴权时读取的设置，避免重复读取 D1。匿名公开访问会对分类、书签和公开设置的聚合结果使用短 TTL Cloudflare edge cache；带登录态的管理请求绕过该缓存，确保后台保存后立即读取最新数据。分类和书签排序查询配有复合索引，降低 D1 排序扫描成本。
+
 ### 首页搜索
 
 搜索框输入关键词时会直接筛选首页书签区域，不再弹出本地书签下拉列表。匹配字段包括书签标题、URL、描述和分类名称；按 Enter 仍会使用当前选中的搜索引擎进行外部搜索。
