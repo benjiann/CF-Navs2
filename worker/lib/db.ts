@@ -75,6 +75,9 @@ const PUBLIC_DATA_SETTINGS_KEYS: (keyof Settings)[] = [
   'content_layout',
   'footer_html',
 ]
+const PUBLIC_DATA_SETTINGS_WITHOUT_SITE_CONFIG_KEYS = PUBLIC_DATA_SETTINGS_KEYS.filter(
+  (key) => key !== 'site_title' && key !== 'public_mode',
+)
 
 const CATEGORY_LIST_SQL = 'SELECT id, title, icon, sort, created_at FROM categories ORDER BY sort ASC, id ASC'
 const BOOKMARK_LIST_SQL =
@@ -84,6 +87,9 @@ const PUBLIC_BOOKMARK_LIST_SQL =
   'SELECT id, category_id, title, url, icon, icon_source, icon_background_color, description, open_method, sort FROM bookmarks ORDER BY sort ASC, id ASC'
 const SETTINGS_LIST_SQL = 'SELECT key, value FROM settings'
 const PUBLIC_DATA_SETTINGS_LIST_SQL = `SELECT key, value FROM settings WHERE key IN (${PUBLIC_DATA_SETTINGS_KEYS
+  .map((key) => `'${key}'`)
+  .join(',')})`
+const PUBLIC_DATA_SETTINGS_WITHOUT_SITE_CONFIG_LIST_SQL = `SELECT key, value FROM settings WHERE key IN (${PUBLIC_DATA_SETTINGS_WITHOUT_SITE_CONFIG_KEYS
   .map((key) => `'${key}'`)
   .join(',')})`
 
@@ -180,14 +186,17 @@ export async function listBookmarks(db: D1Database): Promise<Bookmark[]> {
   })
 }
 
-export async function getPublicDataSource(db: D1Database): Promise<{
+export async function getPublicDataSource(db: D1Database, siteConfig?: SiteConfig): Promise<{
   categories: PublicCategory[]
   bookmarks: PublicBookmark[]
   settings: Settings
 }> {
   return await withSchemaRetry(db, async () => {
+    const settingsSql = siteConfig
+      ? PUBLIC_DATA_SETTINGS_WITHOUT_SITE_CONFIG_LIST_SQL
+      : PUBLIC_DATA_SETTINGS_LIST_SQL
     const [settingsResult, categoriesResult, bookmarksResult] = await db.batch([
-      db.prepare(PUBLIC_DATA_SETTINGS_LIST_SQL),
+      db.prepare(settingsSql),
       db.prepare(PUBLIC_CATEGORY_LIST_SQL),
       db.prepare(PUBLIC_BOOKMARK_LIST_SQL),
     ])
@@ -195,7 +204,7 @@ export async function getPublicDataSource(db: D1Database): Promise<{
     return {
       categories: (categoriesResult.results ?? []) as PublicCategory[],
       bookmarks: (bookmarksResult.results ?? []) as PublicBookmark[],
-      settings: settingsFromRows((settingsResult.results ?? []) as Array<{ key: string; value: string | null }>),
+      settings: settingsFromRows((settingsResult.results ?? []) as Array<{ key: string; value: string | null }>, siteConfig),
     }
   })
 }
@@ -366,8 +375,14 @@ function settingsFromRawMap(raw: Map<string, unknown>): Settings {
   return out
 }
 
-function settingsFromRows(rows: Array<{ key: string; value: string | null }>): Settings {
-  return settingsFromRawMap(readRawSettingsRows(rows))
+function settingsFromRows(rows: Array<{ key: string; value: string | null }>, base: Partial<Settings> = {}): Settings {
+  const raw = readRawSettingsRows(rows)
+  for (const key of SETTINGS_KEYS) {
+    if (base[key] !== undefined) {
+      raw.set(key, base[key])
+    }
+  }
+  return settingsFromRawMap(raw)
 }
 
 export function settingsFromPatchDefaults(patch: Partial<Settings>): Settings {

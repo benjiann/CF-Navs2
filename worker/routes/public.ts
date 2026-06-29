@@ -122,7 +122,7 @@ publicRoutes.get('/public/data', async (c) => {
     privateAccessAllowed = true
   }
 
-  const publicDataSource = await getPublicDataSource(c.env.DB)
+  const publicDataSource = await getPublicDataSource(c.env.DB, cachedSiteConfig ? undefined : siteConfig)
   const publicSettings = publicDataSource.settings
   if (!publicSettings.public_mode && !privateAccessAllowed) {
     if (!token) {
