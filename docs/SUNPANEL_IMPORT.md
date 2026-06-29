@@ -59,7 +59,8 @@ node scripts/convert-sunpanel.cjs SunPanel-Data.json cf-navs-import.json
 1. **图标转换**：
    - HTTP/HTTPS 图标：直接使用
    - Sun-Panel 上传的图标：可转换为 favicon.im 候选地址保存
-   - 非图片图标：留空，导入后按现有图标候选逻辑自动补全
+   - Iconify 图标：识别 `mdi:home`、`simple-icons:github`、`iconify:`、`@iconify-json/*`、`@iconify-icons/*` 和 `icon-sets.iconify.design/...`，保存为标准 Iconify URL，并通过 `/api/iconify/*` 代理缓存加载
+   - 非图片图标：无法识别为 Iconify 时，导入后按现有图标候选逻辑处理
 
    运行时前台不会直接请求 favicon.im。书签图标会通过 `/api/icon/:id` 代理读取 D1 与 Cloudflare 边缘缓存，分类图标会通过 `/api/category-icon/:id` 代理读取；第三方图标服务限流或失败时显示文字 fallback，避免浏览器控制台出现 favicon.im 429。
 
@@ -105,7 +106,7 @@ node scripts/convert-sunpanel.cjs SunPanel-Data.json cf-navs-import.json
 部分书签的图标可能无法自动获取，你可以：
 
 1. 编辑该书签
-2. 在图标候选中选择自动解析、Favicon.im、文字图标或 Google
+2. 在图标候选中选择 Favicon.im、文字图标、Google 或 Iconify
 3. 选择文字图标时可切换内置配色方案
 4. 或手动输入图标 URL / 表情
 
@@ -140,8 +141,8 @@ node scripts/convert-sunpanel.cjs SunPanel-Data.json cf-navs-import.json
 - 部分网站的 favicon 可能获取失败
 
 **解决方法：**
-1. 编辑书签，点击"获取图标"按钮
-2. 选择文字图标或 Google / Favicon.im 候选
+1. 编辑书签
+2. 选择文字图标、Google、Favicon.im 或 Iconify 候选
 3. 或使用图床上传图标后手动填写 URL；运行时仍会优先通过 CF-Navs 图标代理缓存展示
 
 ### Q: 导入后排序不对？

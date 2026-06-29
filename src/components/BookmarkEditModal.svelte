@@ -49,14 +49,12 @@
   export let categories: BookmarkCategoryOption[] = []
   export let onSubmit: ((payload: BookmarkFormValue) => void | Promise<void>) | undefined = undefined
   export let onCancel: (() => void) | undefined = undefined
-  export let onFetchFavicon: ((url: string) => Promise<string>) | undefined = undefined
   export let onDelete: ((bookmark: { id: string | number; title: string }) => void | Promise<void>) | undefined = undefined
   export let deleting = false
   export let imageHostUrl = ''
 
   let form: BookmarkFormValue = { ...emptyForm }
   let formKey = ''
-  let fetchingFavicon = false
   let faviconError = ''
   let selectedLogoSchemeName = DEFAULT_LOGO_SURF_SCHEME.name
   let iconifyName = ''
@@ -106,11 +104,10 @@
   $: normalizedIconifyName = normalizeIconifyName(iconifyName)
   $: iconifySourceUrl = iconifyIcon(iconifyName)
   $: iconifyPreviewUrl = iconifyProxyIcon(iconifyName)
+  $: showLogoSchemes = form.icon_source === 'logo_surf' && Boolean(form.url.trim())
+  $: showIconifyOptions = form.icon_source === 'iconify'
+  $: iconifySelected = form.icon_source === 'iconify' && Boolean(iconifySourceUrl) && form.icon === iconifySourceUrl
   $: logoPreviewText = (form.title.trim() || 'NAV').slice(0, 4)
-  $: canShowLogoSchemes = Boolean(
-    form.url.trim() &&
-      (form.icon_source === 'logo_surf' || candidates.some((candidate) => candidate.source === 'logo_surf')),
-  )
   $: if (form.icon_source === 'logo_surf' && form.url.trim()) {
     const nextLogoIcon = logoSurfIcon(form.title.trim(), form.url.trim(), currentLogoScheme)
     if (form.icon !== nextLogoIcon) {
@@ -268,33 +265,6 @@
     iconifyName = ''
   }
 
-  async function handleFetchFavicon() {
-    faviconError = ''
-    const url = form.url.trim()
-    if (!url) {
-      faviconError = '请先填写链接地址'
-      return
-    }
-    if (!onFetchFavicon) {
-      return
-    }
-
-    fetchingFavicon = true
-    try {
-      const icon = await onFetchFavicon(url)
-      if (icon) {
-        form.icon = icon
-        form.icon_source = 'direct'
-      } else {
-        faviconError = '未能获取到图标'
-      }
-    } catch (err) {
-      faviconError = err instanceof Error ? err.message : '获取图标失败'
-    } finally {
-      fetchingFavicon = false
-    }
-  }
-
   function openImageHost() {
     if (!imageHostUrl) return
     const base = imageHostUrl.endsWith('/') ? imageHostUrl.slice(0, -1) : imageHostUrl
@@ -402,6 +372,7 @@
           {/if}
         </div>
 
+        {#if showIconifyOptions}
         <div class="iconify-section">
           <div class="scheme-header">
             <span class="field-label">Iconify 图标</span>
@@ -423,7 +394,8 @@
             {/if}
             <button
               type="button"
-              class="ghost-button fetch-button"
+              class="ghost-button fetch-button iconify-use-button"
+              class:selected={iconifySelected}
               on:click={selectIconifyIcon}
               disabled={loading || !iconifyPreviewUrl}
             >
@@ -435,8 +407,9 @@
             <small class="field-error">{candidateError}</small>
           {/if}
         </div>
+        {/if}
 
-        {#if canShowLogoSchemes}
+        {#if showLogoSchemes}
           <div class="logo-scheme-section">
             <div class="scheme-header">
               <span class="field-label">文字图标配色</span>
@@ -470,15 +443,6 @@
               placeholder="图标 URL / 表情，如 ⭐"
               on:focus={clearIconSelection}
             />
-            <button
-              type="button"
-              class="ghost-button fetch-button"
-              on:click={handleFetchFavicon}
-              disabled={loading || fetchingFavicon || !form.url.trim() || !onFetchFavicon}
-              title="根据链接地址自动获取网站图标（方式1）"
-            >
-              {#if fetchingFavicon}获取中...{:else}服务端解析{/if}
-            </button>
             {#if imageHostUrl}
               <button
                 type="button"
@@ -579,7 +543,7 @@
     z-index: 1;
     display: flex;
     flex-direction: column;
-    width: min(100%, 640px);
+    width: min(100%, 600px);
     max-height: calc(100vh - 28px);
     max-height: calc(100dvh - 28px);
     min-height: 0;
@@ -621,7 +585,7 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     display: grid;
-    gap: 8px;
+    gap: 7px;
     padding: 12px 16px 0;
   }
 
@@ -695,7 +659,7 @@
 
   .iconify-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 34px auto;
+    grid-template-columns: minmax(160px, 300px) 34px max-content;
     align-items: center;
     gap: 6px;
   }
@@ -717,6 +681,13 @@
     object-fit: contain;
   }
 
+  .iconify-use-button.selected {
+    border-color: #2563eb;
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+  }
+
   .text-link-button {
     border: 0;
     background: transparent;
@@ -731,7 +702,7 @@
 
   .icon-candidates {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 8px;
   }
 
@@ -740,7 +711,7 @@
     flex-direction: column;
     align-items: center;
     gap: 4px;
-    min-height: 62px;
+    min-height: 58px;
     padding: 6px;
     border: 2px solid #e2e8f0;
     border-radius: 10px;
@@ -800,7 +771,7 @@
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px;
-    max-height: 118px;
+    max-height: 104px;
     overflow-y: auto;
     overscroll-behavior: auto;
     padding-right: 2px;

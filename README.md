@@ -12,11 +12,11 @@
 - 🔐 **单用户管理**：简单的管理员模式，支持公开访问
 - 📱 **移动端适配**：完美支持桌面和移动设备
 - 🎯 **拖拽排序**：直观的分类和书签排序
-- 🌓 **主题切换**：支持亮色/暗色/自动主题
+- 🌓 **主题切换**：支持亮色/暗色/自动主题，前台右上角可本地快速切换亮暗模式
 - 🔍 **多搜索引擎**：内置多个搜索引擎快速切换
 - 📦 **卡片样式**：支持详情风格和极简风格两种展示
 - 🎨 **自定义背景**：支持纯色、渐变、图片背景
-- 🔖 **五源图标获取**：自动解析 / Favicon.im / 完整标题文字图标 / Google / Iconify 五种方式
+- 🔖 **多源图标获取**：Favicon.im / 完整标题文字图标 / Google / Iconify 多种方式
 - 🎛️ **文字图标配色**：新增/编辑书签时可选择 logo.surf 风格的默认配色方案
 - 💾 **图标本地缓存**：后台自动缓存图标，前台逐层降级保障显示
 - ⚡ **图标缓存代理**：书签和分类图标优先走 Worker + D1 + Cloudflare 边缘缓存，避免页面刷新或筛选时反复请求外站
@@ -163,7 +163,7 @@ npm run deploy
 - ✅ 创建、编辑、删除书签
 - ✅ 前台右键编辑书签，编辑按钮浮在当前卡片上，不挤占卡片网格
 - ✅ 新增/编辑弹窗锁定页面滚动，内容过高时在弹窗内滚动并保持保存按钮可见
-- ✅ 自动获取网站图标
+- ✅ 图标候选与本地图标代理缓存
 - ✅ 文字图标读取完整书签标题，默认使用 #000000 背景与 #FFA31A 文字
 - ✅ 新增/编辑书签时可选择 logo.surf 风格默认配色，并保存为本地 SVG data URI
 - ✅ 拖拽排序
@@ -210,6 +210,10 @@ npm run deploy
 HTTP(S) 书签图标不会在首页直接请求原始外站地址，而是优先通过 `/api/icon/:id` 读取 D1 缓存和 Cloudflare 边缘缓存；代理 cache miss 时会一次性读取书签图标地址、标题和 `icon_blob`，避免每个图标拆成多次 D1 查询。外站图标抓取成功后直接以图片字节返回并写入 edge cache，只有书签图标需要持久化到 D1 时才生成 base64 data URI，减少 Worker CPU 编解码开销。分类图标通过 `/api/category-icon/:id` 代理加载。Favicon.im 或其他第三方图标服务限流、超时、返回错误或书签图标缺失时，后端会返回短 TTL 的临时 SVG 文字图标，避免前台 `<img>` 产生 404；该 fallback 会同时短时写入 Cloudflare edge cache 和 Service Worker 本地缓存，防止页面滚动、刷新或搜索筛选后反复触发同一个失败外站请求。
 
 Iconify 图标使用 `https://api.iconify.design/{set}/{name}.svg` 作为保存格式，新增/编辑书签时会给出 Iconify 候选，也可以填写 `mdi:home`、`simple-icons:github` 这类图标名，或直接粘贴 `https://icon-sets.iconify.design/mdi/home/` 这类 Iconify 图标库页面链接；候选、手动输入预览和首页/后台已保存的 Iconify 图标都会规范化为 `/api/iconify/:set/:name.svg` 同源代理。Service Worker 会对 `/api/icon/*`、`/api/category-icon/*`、`/api/iconify/*` 和兼容旧版本的 Iconify SVG 使用 cache-first 策略；同一个 Iconify 图标在本地浏览器只缓存一份，后台修改书签、配置或首页搜索筛选导致组件重新渲染时，仍优先读取本地缓存。部署新版后如浏览器仍使用旧逻辑，请强制刷新一次页面，让新版 Service Worker 激活。
+
+新增/编辑书签弹窗默认只展示基础字段和图标候选；选择“文字图标”后才展开配色方案，选择 Iconify 后才展开 Iconify 输入、预览和确认按钮。前台右上角主题按钮只写入浏览器本地偏好，不会触发 Worker 请求；默认仍遵循后台站点主题配置。
+
+SunPanel 导入会识别 `mdi:home`、`simple-icons:github`、`iconify:`、`@iconify-json/*`、`@iconify-icons/*` 和 `icon-sets.iconify.design/...` 这类 Iconify 图标值，并保存为标准 `https://api.iconify.design/{set}/{name}.svg`，同时标记 `icon_source: iconify`，首页加载时走 `/api/iconify/*` 代理和本地缓存。
 
 ### 访问性能
 

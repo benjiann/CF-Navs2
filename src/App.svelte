@@ -14,6 +14,7 @@
     type PublicSettings,
     type Settings,
     type SiteConfig,
+    type ThemeMode,
   } from '../shared/types'
   import Home from './views/Home.svelte'
   import { api, getErrorMessage, isApiError, isUnauthorizedError } from './lib/api'
@@ -22,6 +23,8 @@
   import { adminStore, authStore, configStore, isAuthenticated, publicStore } from './lib/stores'
 
   type AppView = 'home' | 'admin' | 'login'
+
+  const THEME_STORAGE_KEY = 'cf-navs.theme-mode'
 
   type CategoryFormValue = {
     id?: string | number
@@ -74,6 +77,7 @@
   let importing = false
   let backupError = ''
   let backupMessage = ''
+  let preferredThemeMode: ThemeMode | null = null
 
   $: config = $configStore.data
   $: publicData = $publicStore.data
@@ -262,7 +266,8 @@
   let mediaQuery: MediaQueryList | null = null
   let handleSystemThemeChange: ((event: MediaQueryListEvent) => void) | null = null
 
-  $: themeMode = publicData?.settings.theme ?? 'auto'
+  $: configuredThemeMode = publicData?.settings.theme ?? 'auto'
+  $: themeMode = preferredThemeMode ?? configuredThemeMode
   $: activeTheme = themeMode === 'auto' ? (systemPrefersDark ? 'dark' : 'light') : themeMode
 
   $: homeBackgroundStyle = buildHomeBackground(publicData?.settings ?? null)
@@ -273,6 +278,23 @@
 
   function isLoggedIn(): boolean {
     return Boolean(get(authStore).session)
+  }
+
+  function readPreferredThemeMode(): ThemeMode | null {
+    if (typeof localStorage === 'undefined') return null
+    const stored = localStorage.getItem(THEME_STORAGE_KEY)
+    return stored === 'light' || stored === 'dark' || stored === 'auto' ? stored : null
+  }
+
+  function writePreferredThemeMode(mode: ThemeMode): void {
+    preferredThemeMode = mode
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(THEME_STORAGE_KEY, mode)
+    }
+  }
+
+  function handleToggleTheme(): void {
+    writePreferredThemeMode(activeTheme === 'dark' ? 'light' : 'dark')
   }
 
   function ensureAdminComponent(): Promise<void> {
@@ -907,11 +929,6 @@
     }
   }
 
-  async function handleFetchFavicon(url: string): Promise<string> {
-    const result = await api.bookmarks.fetchFavicon(url)
-    return result.icon
-  }
-
   function handleExportData(): void {
     backupError = ''
     backupMessage = ''
@@ -975,6 +992,8 @@
   }
 
   onMount(() => {
+    preferredThemeMode = readPreferredThemeMode()
+
     if (typeof window !== 'undefined' && window.matchMedia) {
       mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
       systemPrefersDark = mediaQuery.matches
@@ -1022,6 +1041,8 @@
           onSwitchToAdmin={handleSwitchToAdmin}
           onLogout={handleLogout}
           onOpenLogin={handleOpenLogin}
+          activeTheme={activeTheme}
+          onToggleTheme={handleToggleTheme}
         />
       </div>
     {:else if currentView === 'login'}
@@ -1104,7 +1125,6 @@
         categories={adminCategories.map((category) => ({ id: category.id, title: category.title }))}
         onSubmit={handleSubmitBookmark}
         onCancel={handleCloseBookmarkModal}
-        onFetchFavicon={handleFetchFavicon}
         onDelete={handleDeleteBookmark}
         deleting={deletingBookmarkId === Number(activeBookmark?.id)}
         imageHostUrl={adminData.settings?.image_host_url ?? ''}

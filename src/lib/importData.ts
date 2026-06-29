@@ -1,4 +1,5 @@
 import type { BackupData, Bookmark, Category, ImportReq, Settings } from '../../shared/types'
+import { iconifyIcon } from './icons'
 
 export type ImportSource = 'cf-navs' | 'sunpanel'
 
@@ -38,27 +39,56 @@ function faviconForUrl(url: string): string {
   }
 }
 
-function normalizeImageIcon(icon: unknown, fallbackUrl: string): string | null {
+interface NormalizedSunPanelIcon {
+  icon: string | null
+  icon_source: Bookmark['icon_source']
+  icon_background_color: string | null
+}
+
+function readSunPanelIconValue(icon: unknown): string {
   if (typeof icon === 'string') {
-    const trimmed = icon.trim()
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      return trimmed
-    }
-    return faviconForUrl(fallbackUrl) || null
+    return icon.trim()
   }
 
   if (!isRecord(icon)) {
-    return faviconForUrl(fallbackUrl) || null
+    return ''
   }
 
-  const src = readString(icon.src).trim()
-  const itemType = readNumber(icon.itemType, 0)
+  return (
+    readString(icon.src) ||
+    readString(icon.icon) ||
+    readString(icon.name) ||
+    readString(icon.value) ||
+    readString(icon.iconName)
+  ).trim()
+}
 
-  if (itemType === 2 && (src.startsWith('http://') || src.startsWith('https://'))) {
-    return src
+function normalizeSunPanelIcon(icon: unknown, fallbackUrl: string): NormalizedSunPanelIcon {
+  const value = readSunPanelIconValue(icon)
+  const iconify = iconifyIcon(value)
+  const iconBackground = normalizeIconBackground(icon)
+
+  if (iconify) {
+    return {
+      icon: iconify,
+      icon_source: 'iconify',
+      icon_background_color: iconBackground,
+    }
   }
 
-  return faviconForUrl(fallbackUrl) || null
+  if (value.startsWith('http://') || value.startsWith('https://')) {
+    return {
+      icon: value,
+      icon_source: null,
+      icon_background_color: iconBackground,
+    }
+  }
+
+  return {
+    icon: faviconForUrl(fallbackUrl) || null,
+    icon_source: null,
+    icon_background_color: iconBackground,
+  }
 }
 
 function normalizeIconBackground(icon: unknown): string | null {
@@ -133,14 +163,15 @@ function prepareSunPanelImport(parsed: unknown): PreparedImport {
       if (!url) return
 
       const nextBookmarkId = bookmarkId++
+      const normalizedIcon = normalizeSunPanelIcon(rawBookmark.icon, url)
       bookmarks.push({
         id: nextBookmarkId,
         category_id: categoryId,
         title: readString(rawBookmark.title, `Bookmark ${nextBookmarkId}`).trim() || `Bookmark ${nextBookmarkId}`,
         url,
-        icon: normalizeImageIcon(rawBookmark.icon, url),
-        icon_source: null,
-        icon_background_color: normalizeIconBackground(rawBookmark.icon),
+        icon: normalizedIcon.icon,
+        icon_source: normalizedIcon.icon_source,
+        icon_background_color: normalizedIcon.icon_background_color,
         description: readString(rawBookmark.description).trim() || null,
         open_method: sunPanelOpenMethodToCFNavs(rawBookmark.openMethod),
         sort: readNumber(rawBookmark.sort, bookmarkIndex),

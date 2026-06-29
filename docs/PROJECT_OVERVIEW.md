@@ -21,7 +21,7 @@
 - ✅ 自定义背景（纯色/渐变/图片）
 - ✅ 遮罩颜色与透明度后台可调
 - ✅ 卡片背景颜色与透明度后台可调
-- ✅ 主题切换（亮色/暗色/自动）
+- ✅ 主题切换（亮色/暗色/自动 + 前台本地快速切换）
 - ✅ 公开模式（可选）
 - ✅ PWA app shell（生产环境 Service Worker）
 
@@ -32,7 +32,7 @@
 - ✅ 前台右键编辑书签，编辑入口以卡片浮层显示
 - ✅ 新增/编辑书签弹窗内部滚动，保存按钮保持可见
 - ✅ 拖拽排序（分类和书签）
-- ✅ 五种方式获取图标（自动解析 / Favicon.im / 完整标题文字图标 / Google / Iconify）
+- ✅ 多种方式获取图标（Favicon.im / 完整标题文字图标 / Google / Iconify）
 - ✅ 文字图标读取完整标题，并支持新增/编辑书签时选择 logo.surf 风格配色
 - ✅ 图标代理缓存回退（Worker + D1 + Cloudflare edge cache + Service Worker）
 - ✅ 书签列表搜索筛选
@@ -58,7 +58,7 @@ src/
 ├── lib/
 │   ├── api.ts          # API 客户端
 │   ├── stores.ts       # Svelte stores
-│   ├── icons.ts        # 图标获取辅助（五种方式 + 文字图标配色）
+│   ├── icons.ts        # 图标候选辅助（多源候选 + 文字图标配色）
 │   └── importData.ts   # CF-Navs / SunPanel 导入转换
 └── App.svelte          # 主应用
 ```
@@ -182,6 +182,8 @@ SESSION_TTL = "604800"             # 会话有效期（7天）
 - Worker 为非 HTML 的 `/assets/*` hash 构建产物设置一年 immutable 缓存，为 HTML 和 `sw.js` 设置 no-cache 重验证；Service Worker 预缓存 `/index.html` 做离线回退，避免安装阶段重复预缓存根路径，并且运行时只缓存成功静态资源和成功 HTML 导航响应，避免失败响应污染本地缓存
 - CSS 压缩
 - 图标代理响应由 Service Worker cache-first 读取，页面滚动、搜索筛选和设置保存后优先命中本地缓存；已保存的 Iconify 图标和从 `icon-sets.iconify.design` 复制的图标页面链接都会规范化为稳定 `/api/iconify/*` 代理，同一个图标在浏览器本地只缓存一份；首页书签和分类图标使用原生懒加载与异步解码，降低首屏图标并发请求
+- 前台右上角主题按钮使用浏览器本地偏好快速切换亮暗模式，不触发 Worker 请求；新增/编辑书签弹窗默认收起文字图标配色和 Iconify 输入区，选中对应图标类型后才展开
+- SunPanel 导入会识别 Iconify 图标名和 icon-sets 页面链接，导入后保存为标准 Iconify URL 并标记 `icon_source: iconify`，首页走 `/api/iconify/*` 代理与本地缓存
 - 首页搜索预计算书签索引，滚动高亮缓存分区 DOM 并用 `requestAnimationFrame` 节流
 - 后台入口或首页管理操作按需使用 `/api/admin/data` 一次拉取分类、书签和完整设置，并从完整设置派生站点配置
 - 登录响应携带用户名；登录成功和已有登录态启动都无需先请求 `/api/me`

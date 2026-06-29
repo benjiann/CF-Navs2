@@ -45,10 +45,6 @@ export function getHostname(url: string): string {
   }
 }
 
-export function directIcon(url: string): string {
-  return `/api/fetch-favicon?url=${encodeURIComponent(url)}`
-}
-
 export function faviconImIcon(url: string): string {
   const hostname = getHostname(url)
   return hostname ? `https://favicon.im/${hostname}?larger=true` : ''
@@ -198,11 +194,6 @@ export function getIconCandidates(url: string, title: string): IconCandidate[] {
 
   const iconify = defaultIconifyIcon(url)
   const candidates: IconCandidate[] = [
-    {
-      source: 'direct',
-      label: '\u81ea\u52a8\u83b7\u53d6',
-      url: directIcon(url),
-    },
     {
       source: 'favicon_im',
       label: 'Favicon.im',

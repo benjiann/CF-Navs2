@@ -128,7 +128,7 @@ Published cf-navs (x.xx sec)
 
 - [ ] 创建分类成功
 - [ ] 创建书签成功
-- [ ] 创建书签时能看到自动获取 / Favicon.im / 完整标题文字图标 / Google / Iconify 候选，并可手动填写 Iconify 图标名或粘贴 `https://icon-sets.iconify.design/{set}/{name}/` 页面链接，Iconify 候选和手动预览请求都走 `/api/iconify/*`
+- [ ] 创建书签时能看到 Favicon.im / 完整标题文字图标 / Google / Iconify 候选；文字图标配色和 Iconify 输入区默认收起，选中对应类型后展开；Iconify 候选和手动预览请求都走 `/api/iconify/*`
 - [ ] 选择"文字图标"后能看到内置配色方案，并可切换保存 logo.surf 风格 SVG 图标
 - [ ] 新增/编辑书签弹窗内容过高时可在弹窗内滚动，保存按钮始终可见
 - [ ] 选中一种图标后保存，图标显示正常

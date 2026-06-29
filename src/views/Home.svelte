@@ -18,6 +18,8 @@
   export let onSwitchToAdmin: (() => AsyncVoid) | undefined = undefined
   export let onLogout: (() => AsyncVoid) | undefined = undefined
   export let onOpenLogin: (() => AsyncVoid) | undefined = undefined
+  export let activeTheme: 'light' | 'dark' = 'light'
+  export let onToggleTheme: (() => AsyncVoid) | undefined = undefined
 
   let categoryBookmarks = new Map<number, PublicBookmark[]>()
   let categoryTitleById = new Map<number, string>()
@@ -273,6 +275,17 @@
 
 <div class="home-shell" style={homeShellStyle}>
   <div class="floating-actions">
+    <button
+      type="button"
+      class="icon-button theme-toggle-button"
+      class:is-dark={activeTheme === 'dark'}
+      on:click={() => onToggleTheme?.()}
+      title={activeTheme === 'dark' ? '切换到浅色模式' : '切换到深色模式'}
+      aria-label={activeTheme === 'dark' ? '切换到浅色模式' : '切换到深色模式'}
+      aria-pressed={activeTheme === 'dark'}
+    >
+      {activeTheme === 'dark' ? '☾' : '☀'}
+    </button>
     {#if isAuthenticated}
       <button
         type="button"
@@ -460,6 +473,15 @@
     background: rgba(255, 255, 255, 0.95);
     border-color: rgba(37, 99, 235, 0.45);
     transform: translateY(-1px);
+  }
+
+  .theme-toggle-button {
+    color: #0f172a;
+  }
+
+  .theme-toggle-button.is-dark {
+    background: rgba(15, 23, 42, 0.82);
+    color: #e5eefb;
   }
 
   .icon-button:disabled {
