@@ -58,6 +58,8 @@
   let faviconError = ''
   let selectedLogoSchemeName = DEFAULT_LOGO_SURF_SCHEME.name
   let iconifyName = ''
+  let iconifyUseConfirmed = false
+  let confirmedIconifyName = ''
   let previousBodyOverflow: string | null = null
   let previousDocumentOverflow: string | null = null
 
@@ -86,6 +88,8 @@
     }
     selectedLogoSchemeName = findLogoSchemeName(form.icon) ?? DEFAULT_LOGO_SURF_SCHEME.name
     iconifyName = form.icon_source === 'iconify' ? iconifyNameFromUrl(form.icon) ?? '' : ''
+    iconifyUseConfirmed = mode === 'edit' && form.icon_source === 'iconify' && Boolean(iconifyName)
+    confirmedIconifyName = iconifyUseConfirmed ? iconifyName : ''
     // 编辑模式也重新生成候选
     if (form.url.trim()) {
       candidates = getIconCandidates(form.url.trim(), form.title.trim())
@@ -106,8 +110,16 @@
   $: iconifyPreviewUrl = iconifyProxyIcon(iconifyName)
   $: showLogoSchemes = form.icon_source === 'logo_surf' && Boolean(form.url.trim())
   $: showIconifyOptions = form.icon_source === 'iconify'
-  $: iconifySelected = form.icon_source === 'iconify' && Boolean(iconifySourceUrl) && form.icon === iconifySourceUrl
+  $: iconifySelected =
+    iconifyUseConfirmed &&
+    form.icon_source === 'iconify' &&
+    Boolean(iconifySourceUrl) &&
+    form.icon === iconifySourceUrl &&
+    confirmedIconifyName === normalizedIconifyName
   $: logoPreviewText = (form.title.trim() || 'NAV').slice(0, 4)
+  $: if (iconifyUseConfirmed && normalizedIconifyName !== confirmedIconifyName) {
+    iconifyUseConfirmed = false
+  }
   $: if (form.icon_source === 'logo_surf' && form.url.trim()) {
     const nextLogoIcon = logoSurfIcon(form.title.trim(), form.url.trim(), currentLogoScheme)
     if (form.icon !== nextLogoIcon) {
@@ -158,6 +170,8 @@
     form.icon = iconifySourceUrl
     form.icon_source = 'iconify'
     iconifyName = normalizedIconifyName
+    iconifyUseConfirmed = true
+    confirmedIconifyName = normalizedIconifyName
     candidateError = ''
     faviconError = ''
   }
@@ -254,6 +268,8 @@
     form.icon_source = candidate.source
     if (candidate.source === 'iconify') {
       iconifyName = iconifyNameFromUrl(candidate.url) ?? iconifyName
+      iconifyUseConfirmed = false
+      confirmedIconifyName = ''
     }
     candidateError = ''
     faviconError = ''
@@ -263,6 +279,8 @@
     form.icon = ''
     form.icon_source = ''
     iconifyName = ''
+    iconifyUseConfirmed = false
+    confirmedIconifyName = ''
   }
 
   function openImageHost() {
