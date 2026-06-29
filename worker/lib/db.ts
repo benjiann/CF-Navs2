@@ -51,11 +51,36 @@ const DEFAULT_SETTINGS: Settings = {
 
 // Settings 中属于强类型聚合视图的 key（不含 admin_* 等内部 key）
 const SETTINGS_KEYS = Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]
+const PUBLIC_DATA_SETTINGS_KEYS: (keyof Settings)[] = [
+  'site_title',
+  'site_title_color',
+  'site_title_font_size',
+  'public_mode',
+  'theme',
+  'background',
+  'image_host_url',
+  'search_engine',
+  'card_size',
+  'card_style',
+  'card_icon_size',
+  'card_show_description',
+  'card_background_color',
+  'card_background_opacity',
+  'card_icon_show_title',
+  'card_text_color',
+  'search_box_show',
+  'search_engine_selector_show',
+  'content_layout',
+  'footer_html',
+]
 
 const CATEGORY_LIST_SQL = 'SELECT id, title, icon, sort, created_at FROM categories ORDER BY sort ASC, id ASC'
 const BOOKMARK_LIST_SQL =
   'SELECT id, category_id, title, url, icon, icon_source, icon_background_color, description, open_method, sort, created_at FROM bookmarks ORDER BY sort ASC, id ASC'
 const SETTINGS_LIST_SQL = 'SELECT key, value FROM settings'
+const PUBLIC_DATA_SETTINGS_LIST_SQL = `SELECT key, value FROM settings WHERE key IN (${PUBLIC_DATA_SETTINGS_KEYS
+  .map((key) => `'${key}'`)
+  .join(',')})`
 
 function isRecoverableSchemaError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error)
@@ -329,6 +354,13 @@ async function readRawSettings(db: D1Database): Promise<Map<string, unknown>> {
 // 聚合成强类型 Settings（缺失字段回退默认值）
 export async function getSettings(db: D1Database): Promise<Settings> {
   return settingsFromRawMap(await readRawSettings(db))
+}
+
+export async function getPublicDataSettings(db: D1Database): Promise<Settings> {
+  const { results } = await db
+    .prepare(PUBLIC_DATA_SETTINGS_LIST_SQL)
+    .all<{ key: string; value: string | null }>()
+  return settingsFromRows(results ?? [])
 }
 
 export async function getSiteConfig(db: D1Database): Promise<SiteConfig> {

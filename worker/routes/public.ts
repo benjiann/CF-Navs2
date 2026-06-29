@@ -6,7 +6,7 @@ import {
   matchPublicDataCache,
   matchSiteConfigCache,
 } from '../lib/cache'
-import { getSettings, getSiteConfig, listCategoriesAndBookmarks } from '../lib/db'
+import { getPublicDataSettings, getSiteConfig, listCategoriesAndBookmarks } from '../lib/db'
 import { fail } from '../lib/response'
 import { ok } from '../lib/response'
 import { extractBearerToken, validateSession } from '../middleware/auth'
@@ -57,7 +57,7 @@ publicRoutes.get('/public/data', async (c) => {
     if (cached) return cached
   }
 
-  const publicSettings = await getSettings(c.env.DB)
+  const publicSettings = await getPublicDataSettings(c.env.DB)
   if (!publicSettings.public_mode) {
     if (!token) {
       return c.json({
