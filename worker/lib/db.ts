@@ -220,17 +220,6 @@ export async function getAdminData(db: D1Database): Promise<AdminData> {
   })
 }
 
-export async function getBookmark(db: D1Database, id: number): Promise<Bookmark | null> {
-  return await withSchemaRetry(db, async () => (
-    await db
-      .prepare(
-        'SELECT id, category_id, title, url, icon, icon_source, icon_background_color, description, open_method, sort, created_at FROM bookmarks WHERE id = ?',
-      )
-      .bind(id)
-      .first<Bookmark>()
-  ))
-}
-
 export interface BookmarkIconData {
   title: string
   url: string
@@ -294,38 +283,38 @@ export async function updateBookmark(
   id: number,
   req: BookmarkUpsertReq,
 ): Promise<Bookmark | null> {
-  const existing = await getBookmark(db, id)
-  if (!existing) return null
-  const open_method: 1 | 2 | 3 = req.open_method === 2 ? 2 : req.open_method === 3 ? 3 : req.open_method === 1 ? 1 : existing.open_method
-  const iconChanged = (req.icon ?? null) !== existing.icon
-  const iconBlobSql = iconChanged ? ', icon_blob = NULL' : ''
-  await db
+  const nextIcon = req.icon ?? null
+  const openMethod: 1 | 2 | 3 | null =
+    req.open_method === 2 ? 2 : req.open_method === 3 ? 3 : req.open_method === 1 ? 1 : null
+  return await db
     .prepare(
-      `UPDATE bookmarks SET category_id = ?, title = ?, url = ?, icon = ?, icon_source = ?, icon_background_color = ?${iconBlobSql}, description = ?, open_method = ? WHERE id = ?`,
+      `UPDATE bookmarks
+       SET category_id = ?,
+           title = ?,
+           url = ?,
+           icon_blob = CASE WHEN (icon IS NULL AND ? IS NULL) OR icon = ? THEN icon_blob ELSE NULL END,
+           icon = ?,
+           icon_source = ?,
+           icon_background_color = ?,
+           description = ?,
+           open_method = COALESCE(?, open_method)
+       WHERE id = ?
+       RETURNING id, category_id, title, url, icon, icon_source, icon_background_color, description, open_method, sort, created_at`,
     )
     .bind(
       req.category_id,
       req.title,
       req.url,
-      req.icon ?? null,
+      nextIcon,
+      nextIcon,
+      nextIcon,
       req.icon_source ?? null,
       req.icon_background_color ?? null,
       req.description ?? null,
-      open_method,
+      openMethod,
       id,
     )
-    .run()
-  return {
-    ...existing,
-    category_id: req.category_id,
-    title: req.title,
-    url: req.url,
-    icon: req.icon ?? null,
-    icon_source: req.icon_source ?? null,
-    icon_background_color: req.icon_background_color ?? null,
-    description: req.description ?? null,
-    open_method,
-  }
+    .first<Bookmark>()
 }
 
 export async function deleteBookmark(db: D1Database, id: number): Promise<boolean> {
