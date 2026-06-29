@@ -92,6 +92,7 @@ const PUBLIC_DATA_SETTINGS_LIST_SQL = `SELECT key, value FROM settings WHERE key
 const PUBLIC_DATA_SETTINGS_WITHOUT_SITE_CONFIG_LIST_SQL = `SELECT key, value FROM settings WHERE key IN (${PUBLIC_DATA_SETTINGS_WITHOUT_SITE_CONFIG_KEYS
   .map((key) => `'${key}'`)
   .join(',')})`
+const SORT_UPDATE_CHUNK_SIZE = 300
 
 function isRecoverableSchemaError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error)
@@ -109,6 +110,35 @@ async function withSchemaRetry<T>(db: D1Database, operation: () => Promise<T>): 
     if (!isRecoverableSchemaError(error)) throw error
     await ensureSchema(db, true)
     return await operation()
+  }
+}
+
+async function sortRowsByIds(db: D1Database, table: 'categories' | 'bookmarks', ids: number[]): Promise<void> {
+  if (ids.length === 0) return
+
+  const stmts: D1PreparedStatement[] = []
+  for (let start = 0; start < ids.length; start += SORT_UPDATE_CHUNK_SIZE) {
+    const chunk = ids.slice(start, start + SORT_UPDATE_CHUNK_SIZE)
+    const cases = chunk.map(() => 'WHEN ? THEN ?').join(' ')
+    const where = chunk.map(() => '?').join(', ')
+    const params: number[] = []
+
+    chunk.forEach((id, index) => {
+      params.push(id, start + index)
+    })
+    params.push(...chunk)
+
+    stmts.push(
+      db
+        .prepare(`UPDATE ${table} SET sort = CASE id ${cases} ELSE sort END WHERE id IN (${where})`)
+        .bind(...params),
+    )
+  }
+
+  if (stmts.length === 1) {
+    await stmts[0].run()
+  } else {
+    await db.batch(stmts)
   }
 }
 
@@ -168,11 +198,7 @@ export async function deleteCategory(db: D1Database, id: number): Promise<boolea
 
 // 批量排序：按 ids 下标写 sort，单次 batch 提交
 export async function sortCategories(db: D1Database, ids: number[]): Promise<void> {
-  if (ids.length === 0) return
-  const stmts = ids.map((id, i) =>
-    db.prepare('UPDATE categories SET sort = ? WHERE id = ?').bind(i, id),
-  )
-  await db.batch(stmts)
+  await sortRowsByIds(db, 'categories', ids)
 }
 
 // ========== 书签 ==========
@@ -320,11 +346,7 @@ export async function deleteBookmark(db: D1Database, id: number): Promise<boolea
 }
 
 export async function sortBookmarks(db: D1Database, ids: number[]): Promise<void> {
-  if (ids.length === 0) return
-  const stmts = ids.map((id, i) =>
-    db.prepare('UPDATE bookmarks SET sort = ? WHERE id = ?').bind(i, id),
-  )
-  await db.batch(stmts)
+  await sortRowsByIds(db, 'bookmarks', ids)
 }
 
 // ========== settings ==========

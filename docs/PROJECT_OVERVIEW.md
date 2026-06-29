@@ -194,6 +194,7 @@ SESSION_TTL = "604800"             # 会话有效期（7天）
 - 后台 CRUD、排序和设置保存后使用接口返回值增量更新本地 store，避免额外拉取全量 `/api/public/data`
 - 新增书签后异步预热普通外站图标 blob；编辑书签时不再无条件预热图标，避免只改标题、描述、分类或打开方式时重复请求外站图标并写 D1
 - 后台保存设置和导入恢复的 settings 写入合并为单条多 VALUES upsert，减少完整配置保存时的 D1 statement 数
+- 分类和书签排序使用分块 `UPDATE ... CASE id ... WHERE id IN (...)`，大列表拖拽排序时不再为每个 id 生成一条 D1 statement
 
 ### 后端
 - D1 索引优化
