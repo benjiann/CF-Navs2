@@ -60,7 +60,13 @@ publicRoutes.get('/public/data', async (c) => {
   const publicSettings = await getSettings(c.env.DB)
   if (!publicSettings.public_mode) {
     if (!token) {
-      return c.json(fail(ErrCode.FORBIDDEN, 'forbidden'))
+      return c.json({
+        ...fail(ErrCode.FORBIDDEN, 'forbidden'),
+        data: {
+          site_title: publicSettings.site_title,
+          public_mode: false,
+        },
+      })
     }
 
     const session = await validateSession(c.env, token)

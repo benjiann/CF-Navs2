@@ -1,18 +1,20 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte'
   import { get } from 'svelte/store'
-  import type {
-    Bookmark,
-    BookmarkUpsertReq,
-    Category,
-    CategoryUpsertReq,
-    IconSource,
-    PublicData,
-    PublicSettings,
-    Settings,
+  import {
+    ErrCode,
+    type Bookmark,
+    type BookmarkUpsertReq,
+    type Category,
+    type CategoryUpsertReq,
+    type IconSource,
+    type PublicData,
+    type PublicSettings,
+    type Settings,
+    type SiteConfig,
   } from '../shared/types'
   import Home from './views/Home.svelte'
-  import { api, getErrorMessage, isUnauthorizedError } from './lib/api'
+  import { api, getErrorMessage, isApiError, isUnauthorizedError } from './lib/api'
   import { colorToRgbString } from './lib/color'
   import { prepareImportPayload, type ImportSource } from './lib/importData'
   import { adminStore, authStore, configStore, isAuthenticated, publicStore } from './lib/stores'
@@ -176,6 +178,40 @@
     }
   }
 
+  function applyConfigFromSettings(settings: Pick<Settings, 'site_title' | 'public_mode'>): void {
+    configStore.setData({
+      site_title: settings.site_title,
+      public_mode: settings.public_mode,
+    })
+  }
+
+  function applyConfigFromPublicData(data: PublicData): void {
+    configStore.setData({
+      site_title: data.settings.site_title,
+      public_mode: true,
+    })
+  }
+
+  function isPublicModeForbidden(error: unknown): boolean {
+    return isApiError(error) && error.code === ErrCode.FORBIDDEN
+  }
+
+  function siteConfigFromForbiddenError(error: unknown): SiteConfig | null {
+    if (!isApiError(error) || !error.data || typeof error.data !== 'object') {
+      return null
+    }
+
+    const data = error.data as Partial<SiteConfig>
+    if (typeof data.site_title === 'string' && data.public_mode === false) {
+      return {
+        site_title: data.site_title,
+        public_mode: false,
+      }
+    }
+
+    return null
+  }
+
   $: adminCategories = toAdminCategories(adminData.categories, adminData.bookmarks)
   $: adminBookmarks = toAdminBookmarks(adminData.bookmarks)
   $: settingsValue = toSettingsForm(adminData.settings)
@@ -253,15 +289,27 @@
   }
 
   async function refreshPublicData(): Promise<PublicData | null> {
-    if (get(configStore).data?.public_mode || isLoggedIn()) {
-      try {
-        return await publicStore.refresh()
-      } catch (error) {
-        rootError = getErrorMessage(error)
+    const config = get(configStore).data
+    if (config?.public_mode === false && !isLoggedIn()) {
+      publicStore.reset()
+      return null
+    }
+
+    try {
+      const data = await publicStore.refresh()
+      if (!isLoggedIn()) applyConfigFromPublicData(data)
+      return data
+    } catch (error) {
+      if (isPublicModeForbidden(error)) {
+        publicStore.reset()
+        configStore.setData(siteConfigFromForbiddenError(error) ?? {
+          site_title: config?.site_title ?? 'CF-Navs',
+          public_mode: false,
+        })
         return null
       }
-    } else {
-      publicStore.reset()
+
+      rootError = getErrorMessage(error)
       return null
     }
   }
@@ -367,10 +415,7 @@
 
   function applyLocalSettings(settings: Settings): void {
     adminStore.setSettings(settings)
-    configStore.setData({
-      site_title: settings.site_title,
-      public_mode: settings.public_mode,
-    })
+    applyConfigFromSettings(settings)
 
     const current = get(publicStore).data
     if (current) {
@@ -388,6 +433,7 @@
     }
 
     adminStore.replaceData(data)
+    applyConfigFromSettings(data.settings)
     publicStore.setData({
       categories: data.categories,
       bookmarks: data.bookmarks,
@@ -399,19 +445,10 @@
     booting = true
     rootError = ''
 
-    const [configResult, authResult] = await Promise.allSettled([
-      configStore.refresh(),
-      authStore.initialize(),
-    ])
-
-    if (configResult.status === 'rejected') {
-      rootError = getErrorMessage(configResult.reason)
-      booting = false
-      return
-    }
-
-    if (authResult.status === 'rejected') {
-      rootError = getErrorMessage(authResult.reason)
+    try {
+      await authStore.initialize()
+    } catch (error) {
+      rootError = getErrorMessage(error)
     }
 
     if (isLoggedIn()) {
@@ -525,7 +562,6 @@
       await authStore.login(payload.username, payload.password)
       loginModalOpen = false
       rootError = ''
-      await configStore.refresh()
       await refreshLoggedInData()
       await ensureAdminComponent()
       currentView = 'admin'
@@ -536,6 +572,7 @@
 
   async function handleLogout(): Promise<void> {
     rootError = ''
+    const previousSettings = get(adminStore).data.settings
 
     try {
       await authStore.logout()
@@ -543,7 +580,9 @@
       resetSettingsState()
       resetBookmarkState()
       adminStore.reset()
-      await configStore.refresh()
+      if (previousSettings) {
+        applyConfigFromSettings(previousSettings)
+      }
       await refreshPublicData()
       const nextView: AppView = get(configStore).data?.public_mode === false ? 'admin' : 'home'
       if (nextView === 'admin') await ensureAdminComponent()
@@ -803,7 +842,6 @@
 
       const result = await api.data.importAll(prepared.payload)
 
-      await configStore.refresh()
       await refreshLoggedInData()
       backupMessage = `导入成功：${result.categories} 个分类、${result.bookmarks} 个书签。`
     } catch (error) {
