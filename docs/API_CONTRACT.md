@@ -85,10 +85,10 @@
 - `favicon_im`：使用 `https://favicon.im/{hostname}?larger=true`。
 - `logo_surf`：本地生成完整标题文字 SVG data URI，支持新增/编辑书签时选择 logo.surf 风格配色。
 - `google`：使用 Google s2 favicons 接口。
-- `iconify`：使用 Iconify SVG API，保存格式为 `https://api.iconify.design/{set}/{name}.svg`，例如 `mdi:home` 会转换为 `https://api.iconify.design/mdi/home.svg`；新增/编辑弹窗会展示 Iconify 候选，候选和手动输入预览都通过 `/api/iconify/{set}/{name}.svg` 代理加载。
+- `iconify`：使用 Iconify SVG API，保存格式为 `https://api.iconify.design/{set}/{name}.svg`，例如 `mdi:home` 或 `https://icon-sets.iconify.design/mdi/home/` 会转换为 `https://api.iconify.design/mdi/home.svg`；新增/编辑弹窗会展示 Iconify 候选，候选、手动输入预览和 icon-sets 页面链接都通过 `/api/iconify/{set}/{name}.svg` 代理加载。
 - `custom`：手动填写 URL、表情或图床地址。
 
-创建或更新书签时，如果图标是普通 HTTP(S) 图片，后端会尝试异步缓存到 `bookmarks.icon_blob`；Iconify 图标不写入 `icon_blob`，由 `/api/iconify/:set/:name.svg`、Cloudflare edge cache 和浏览器 Service Worker 缓存复用。更新书签但图标地址未改变时不会清空已有 `icon_blob`。前台展示普通 HTTP(S) 书签图标时默认使用 `/api/icon/:id?v=...`，分类图标默认使用 `/api/category-icon/:id?v=...`，已保存的 Iconify 书签图标使用稳定的 `/api/iconify/:set/:name.svg`，避免页面刷新、搜索筛选或设置保存后直接重复请求外站。
+创建或更新书签时，如果图标是普通 HTTP(S) 图片，后端会尝试异步缓存到 `bookmarks.icon_blob`；Iconify 图标和 icon-sets 页面链接不写入 `icon_blob`，由 `/api/iconify/:set/:name.svg`、Cloudflare edge cache 和浏览器 Service Worker 缓存复用。更新书签但图标地址未改变时不会清空已有 `icon_blob`。前台展示普通 HTTP(S) 书签图标时默认使用 `/api/icon/:id?v=...`，分类图标默认使用 `/api/category-icon/:id?v=...`，已保存的 Iconify 书签图标使用稳定的 `/api/iconify/:set/:name.svg`，避免页面刷新、搜索筛选或设置保存后直接重复请求外站。
 
 前端不应直接把 `favicon.im` 或持久化的 Iconify 图标地址渲染到首页 `<img>`。Favicon.im、Google s2、Iconify 或自定义外站图标都应通过图标代理展示；第三方服务限流、超时、4xx/5xx、图标缺失或缓存损坏时，代理返回 `no-store` 临时 SVG fallback，不写入长期缓存，也不让前台 `<img>` 请求产生 404。Service Worker 对 `/api/icon/*`、`/api/category-icon/*`、`/api/iconify/*` 和兼容旧版本的 `https://api.iconify.design/*.svg` 使用 cache-first 策略，但不会缓存带 `X-Icon-Fallback: 1` 的临时 fallback；同一个 Iconify 图标应共享同一个 `/api/iconify/*` 本地缓存键，不按书签 ID 重复缓存。
 

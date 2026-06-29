@@ -143,20 +143,34 @@ function normalizeIconifyParam(value: string): string {
   return decodeURIComponent(value).replace(/\.svg$/i, '').trim().toLowerCase()
 }
 
-function iconifyUrlFromParams(prefixParam: string, nameParam: string): string | null {
-  const prefix = normalizeIconifyParam(prefixParam)
-  const name = normalizeIconifyParam(nameParam)
-  if (!/^[a-z0-9-]+$/.test(prefix) || !/^[a-z0-9-]+$/.test(name)) {
+function normalizeIconifyPair(prefix: string, name: string): string | null {
+  const normalizedPrefix = prefix.trim().toLowerCase()
+  const normalizedName = name.trim().toLowerCase().replace(/\.svg$/i, '')
+  if (!/^[a-z0-9-]+$/.test(normalizedPrefix) || !/^[a-z0-9-]+$/.test(normalizedName)) {
     return null
   }
 
-  return `https://api.iconify.design/${encodeURIComponent(prefix)}/${encodeURIComponent(name)}.svg`
+  return `https://api.iconify.design/${encodeURIComponent(normalizedPrefix)}/${encodeURIComponent(normalizedName)}.svg`
+}
+
+function iconifyUrlFromParams(prefixParam: string, nameParam: string): string | null {
+  const prefix = normalizeIconifyParam(prefixParam)
+  const name = normalizeIconifyParam(nameParam)
+  return normalizeIconifyPair(prefix, name)
 }
 
 function isIconifyIconUrl(value: string): boolean {
   try {
     const url = new URL(value)
-    return url.protocol === 'https:' && url.hostname === 'api.iconify.design' && url.pathname.endsWith('.svg')
+    const parts = url.pathname.split('/').filter(Boolean)
+    if (parts.length < 2) return false
+    const iconUrl = normalizeIconifyPair(decodeURIComponent(parts[0]), decodeURIComponent(parts[1]))
+    if (!iconUrl) return false
+
+    return (
+      url.protocol === 'https:' &&
+      (url.hostname === 'api.iconify.design' || url.hostname === 'icon-sets.iconify.design')
+    )
   } catch {
     return false
   }

@@ -146,13 +146,10 @@ export async function updateCategory(
   id: number,
   req: CategoryUpsertReq,
 ): Promise<Category | null> {
-  const existing = await getCategory(db, id)
-  if (!existing) return null
-  await db
-    .prepare('UPDATE categories SET title = ?, icon = ? WHERE id = ?')
+  return await db
+    .prepare('UPDATE categories SET title = ?, icon = ? WHERE id = ? RETURNING id, title, icon, sort, created_at')
     .bind(req.title, req.icon ?? null, id)
-    .run()
-  return { ...existing, title: req.title, icon: req.icon ?? null }
+    .first<Category>()
 }
 
 export async function deleteCategory(db: D1Database, id: number): Promise<boolean> {

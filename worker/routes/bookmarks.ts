@@ -39,7 +39,16 @@ function parseId(c: AppContext): number | null {
 function isIconifyIconUrl(value: string): boolean {
   try {
     const url = new URL(value)
-    return url.protocol === 'https:' && url.hostname === 'api.iconify.design' && url.pathname.endsWith('.svg')
+    const parts = url.pathname.split('/').filter(Boolean)
+    if (parts.length < 2) return false
+    const prefix = decodeURIComponent(parts[0]).trim().toLowerCase()
+    const name = decodeURIComponent(parts[1]).trim().toLowerCase().replace(/\.svg$/i, '')
+    return (
+      url.protocol === 'https:' &&
+      (url.hostname === 'api.iconify.design' || url.hostname === 'icon-sets.iconify.design') &&
+      /^[a-z0-9-]+$/.test(prefix) &&
+      /^[a-z0-9-]+$/.test(name)
+    )
   } catch {
     return false
   }

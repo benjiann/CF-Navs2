@@ -154,7 +154,7 @@
 
   function selectIconifyIcon() {
     if (!iconifySourceUrl) {
-      candidateError = '请输入有效的 Iconify 图标名，例如 mdi:home 或 simple-icons:github'
+      candidateError = '请输入有效的 Iconify 图标名或 icon-sets 链接，例如 mdi:home 或 https://icon-sets.iconify.design/mdi/home/'
       return
     }
 
@@ -413,7 +413,7 @@
             <input
               bind:value={iconifyName}
               type="text"
-              placeholder="例如 mdi:home、simple-icons:github"
+              placeholder="例如 mdi:home、simple-icons:github 或 icon-sets 链接"
               aria-label="Iconify 图标名"
             />
             {#if iconifyPreviewUrl}
@@ -430,7 +430,7 @@
               使用 Iconify
             </button>
           </div>
-          <small class="hint-text">从 icon-sets.iconify.design 复制图标名，保存后会通过本地图标代理和浏览器缓存加载。</small>
+          <small class="hint-text">可从 icon-sets.iconify.design 复制图标名或完整图标页面链接，保存后会通过本地图标代理和浏览器缓存加载。</small>
           {#if candidateError}
             <small class="field-error">{candidateError}</small>
           {/if}

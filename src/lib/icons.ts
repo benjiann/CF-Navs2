@@ -54,11 +54,36 @@ export function faviconImIcon(url: string): string {
   return hostname ? `https://favicon.im/${hostname}?larger=true` : ''
 }
 
+const ICONIFY_NAME_PATTERN = /^[a-z0-9-]+:[a-z0-9-]+$/
+
+function normalizeIconifyPair(prefix: string, name: string): string | null {
+  const normalized = `${prefix.trim().toLowerCase()}:${name.trim().toLowerCase().replace(/\.svg$/i, '')}`
+  return ICONIFY_NAME_PATTERN.test(normalized) ? normalized : null
+}
+
+function iconifyNameFromKnownHost(value: string): string | null {
+  const withoutScheme = value.trim().toLowerCase().replace(/^https?:\/\//, '')
+  const pathOnly = withoutScheme.split(/[?#]/, 1)[0]
+  const parts = pathOnly.split('/').filter(Boolean)
+  const host = parts[0]
+
+  if (host !== 'api.iconify.design' && host !== 'icon-sets.iconify.design') {
+    return null
+  }
+
+  if (parts.length < 3) return null
+  return normalizeIconifyPair(decodeURIComponent(parts[1]), decodeURIComponent(parts[2]))
+}
+
 export function normalizeIconifyName(value: string): string {
   const trimmed = value.trim().toLowerCase()
   const withoutUrl = iconifyNameFromUrl(trimmed) ?? trimmed
-  const normalized = withoutUrl.replace(/\s+/g, '').replace(/\//g, ':')
-  return /^[a-z0-9-]+:[a-z0-9-]+$/.test(normalized) ? normalized : ''
+  const withoutPrefix = withoutUrl
+    .replace(/^iconify:/, '')
+    .replace(/^@iconify-json\//, '')
+    .replace(/^@iconify-icons\//, '')
+  const normalized = withoutPrefix.replace(/\s+/g, '').replace(/\/+$/g, '').replace(/\//g, ':')
+  return ICONIFY_NAME_PATTERN.test(normalized) ? normalized : ''
 }
 
 export function iconifyIcon(value: string): string {
@@ -78,17 +103,17 @@ export function iconifyProxyIcon(value: string): string {
 }
 
 export function iconifyNameFromUrl(value: string): string | null {
+  const knownHostName = iconifyNameFromKnownHost(value)
+  if (knownHostName) return knownHostName
+
   try {
     const url = new URL(value)
-    if (url.hostname !== 'api.iconify.design') return null
+    if (url.hostname !== 'api.iconify.design' && url.hostname !== 'icon-sets.iconify.design') return null
 
     const parts = url.pathname.split('/').filter(Boolean)
     if (parts.length < 2) return null
 
-    const prefix = decodeURIComponent(parts[0]).toLowerCase()
-    const name = decodeURIComponent(parts[1]).replace(/\.svg$/i, '').toLowerCase()
-    const normalized = `${prefix}:${name}`
-    return /^[a-z0-9-]+:[a-z0-9-]+$/.test(normalized) ? normalized : null
+    return normalizeIconifyPair(decodeURIComponent(parts[0]), decodeURIComponent(parts[1]))
   } catch {
     return null
   }
