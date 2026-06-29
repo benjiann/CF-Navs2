@@ -56,7 +56,6 @@ export const bookmarksRoutes = new Hono<HonoEnv>()
 
 bookmarksRoutes.get('/', async (c) => {
   try {
-    await ensureSchema(c.env.DB)
     return c.json(ok(await listBookmarks(c.env.DB)))
   } catch {
     return c.json(fail(ErrCode.SERVER_ERROR, 'failed to list bookmarks'))

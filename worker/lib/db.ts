@@ -57,6 +57,25 @@ const BOOKMARK_LIST_SQL =
   'SELECT id, category_id, title, url, icon, icon_source, icon_background_color, description, open_method, sort, created_at FROM bookmarks ORDER BY sort ASC, id ASC'
 const SETTINGS_LIST_SQL = 'SELECT key, value FROM settings'
 
+function isRecoverableSchemaError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  const normalized = message.toLowerCase()
+  return (
+    normalized.includes('no such column') ||
+    normalized.includes('has no column named')
+  )
+}
+
+async function withSchemaRetry<T>(db: D1Database, operation: () => Promise<T>): Promise<T> {
+  try {
+    return await operation()
+  } catch (error) {
+    if (!isRecoverableSchemaError(error)) throw error
+    await ensureSchema(db, true)
+    return await operation()
+  }
+}
+
 // ========== 分类 ==========
 
 export async function listCategories(db: D1Database): Promise<Category[]> {
@@ -123,52 +142,56 @@ export async function sortCategories(db: D1Database, ids: number[]): Promise<voi
 // ========== 书签 ==========
 
 export async function listBookmarks(db: D1Database): Promise<Bookmark[]> {
-  await ensureSchema(db)
-  const { results } = await db
-    .prepare(BOOKMARK_LIST_SQL)
-    .all<Bookmark>()
-  return results ?? []
+  return await withSchemaRetry(db, async () => {
+    const { results } = await db
+      .prepare(BOOKMARK_LIST_SQL)
+      .all<Bookmark>()
+    return results ?? []
+  })
 }
 
 export async function listCategoriesAndBookmarks(db: D1Database): Promise<{
   categories: Category[]
   bookmarks: Bookmark[]
 }> {
-  await ensureSchema(db)
-  const [categoriesResult, bookmarksResult] = await db.batch([
-    db.prepare(CATEGORY_LIST_SQL),
-    db.prepare(BOOKMARK_LIST_SQL),
-  ])
+  return await withSchemaRetry(db, async () => {
+    const [categoriesResult, bookmarksResult] = await db.batch([
+      db.prepare(CATEGORY_LIST_SQL),
+      db.prepare(BOOKMARK_LIST_SQL),
+    ])
 
-  return {
-    categories: (categoriesResult.results ?? []) as Category[],
-    bookmarks: (bookmarksResult.results ?? []) as Bookmark[],
-  }
+    return {
+      categories: (categoriesResult.results ?? []) as Category[],
+      bookmarks: (bookmarksResult.results ?? []) as Bookmark[],
+    }
+  })
 }
 
 export async function getAdminData(db: D1Database): Promise<AdminData> {
-  await ensureSchema(db)
-  const [categoriesResult, bookmarksResult, settingsResult] = await db.batch([
-    db.prepare(CATEGORY_LIST_SQL),
-    db.prepare(BOOKMARK_LIST_SQL),
-    db.prepare(SETTINGS_LIST_SQL),
-  ])
+  return await withSchemaRetry(db, async () => {
+    const [categoriesResult, bookmarksResult, settingsResult] = await db.batch([
+      db.prepare(CATEGORY_LIST_SQL),
+      db.prepare(BOOKMARK_LIST_SQL),
+      db.prepare(SETTINGS_LIST_SQL),
+    ])
 
-  return {
-    categories: (categoriesResult.results ?? []) as Category[],
-    bookmarks: (bookmarksResult.results ?? []) as Bookmark[],
-    settings: settingsFromRows((settingsResult.results ?? []) as Array<{ key: string; value: string | null }>),
-  }
+    return {
+      categories: (categoriesResult.results ?? []) as Category[],
+      bookmarks: (bookmarksResult.results ?? []) as Bookmark[],
+      settings: settingsFromRows((settingsResult.results ?? []) as Array<{ key: string; value: string | null }>),
+    }
+  })
 }
 
 export async function getBookmark(db: D1Database, id: number): Promise<Bookmark | null> {
-  await ensureSchema(db)
-  return await db
-    .prepare(
-      'SELECT id, category_id, title, url, icon, icon_source, icon_background_color, description, open_method, sort, created_at FROM bookmarks WHERE id = ?',
-    )
-    .bind(id)
-    .first<Bookmark>()
+  return await withSchemaRetry(db, async () => (
+    await db
+      .prepare(
+        'SELECT id, category_id, title, url, icon, icon_source, icon_background_color, description, open_method, sort, created_at FROM bookmarks WHERE id = ?',
+      )
+      .bind(id)
+      .first<Bookmark>()
+  ))
 }
 
 export async function createBookmark(db: D1Database, req: BookmarkUpsertReq): Promise<Bookmark> {
@@ -444,8 +467,8 @@ export async function importData(
 
 let _schemaChecked = false
 
-export async function ensureSchema(db: D1Database): Promise<void> {
-  if (_schemaChecked) return
+export async function ensureSchema(db: D1Database, force = false): Promise<void> {
+  if (_schemaChecked && !force) return
   _schemaChecked = true
 
   // 判断列是否存在，不存在则 ADD COLUMN（D1/SQLite 允许）
