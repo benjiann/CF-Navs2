@@ -493,42 +493,66 @@ export async function writeSettingsPatch(db: D1Database, patch: Partial<Settings
 export async function importData(
   db: D1Database,
   data: { categories: Category[]; bookmarks: Bookmark[]; settings?: Partial<Settings> },
-): Promise<{ categories: number; bookmarks: number }> {
+): Promise<{ categories: number; bookmarks: number; importedCategories: Category[]; importedBookmarks: Bookmark[] }> {
   await ensureSchema(db)
   const now = Date.now()
   const stmts: D1PreparedStatement[] = []
+  const importedCategories: Category[] = []
+  const importedBookmarks: Bookmark[] = []
 
   // 先清空（顺序：先书签后分类）
   stmts.push(db.prepare('DELETE FROM bookmarks'))
   stmts.push(db.prepare('DELETE FROM categories'))
 
   for (const c of data.categories) {
+    const category: Category = {
+      id: c.id,
+      title: c.title,
+      icon: c.icon ?? null,
+      sort: Number.isFinite(c.sort) ? c.sort : 0,
+      created_at: c.created_at || now,
+    }
+    importedCategories.push(category)
     stmts.push(
       db
         .prepare('INSERT INTO categories (id, title, icon, sort, created_at) VALUES (?, ?, ?, ?, ?)')
-        .bind(c.id, c.title, c.icon ?? null, Number.isFinite(c.sort) ? c.sort : 0, c.created_at || now),
+        .bind(category.id, category.title, category.icon, category.sort, category.created_at),
     )
   }
 
   for (const b of data.bookmarks) {
     const openMethod = b.open_method === 2 ? 2 : b.open_method === 3 ? 3 : 1
+    const bookmark: Bookmark = {
+      id: b.id,
+      category_id: b.category_id,
+      title: b.title,
+      url: b.url,
+      icon: b.icon ?? null,
+      icon_source: (b as unknown as Record<string, Bookmark['icon_source']>).icon_source ?? null,
+      icon_background_color: (b as unknown as Record<string, string | null | undefined>).icon_background_color ?? null,
+      description: b.description ?? null,
+      open_method: openMethod,
+      sort: Number.isFinite(b.sort) ? b.sort : 0,
+      created_at: b.created_at || now,
+    }
+    importedBookmarks.push(bookmark)
     stmts.push(
       db
         .prepare(
           'INSERT INTO bookmarks (id, category_id, title, url, icon, icon_source, icon_background_color, description, open_method, sort, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         )
         .bind(
-          b.id,
-          b.category_id,
-          b.title,
-          b.url,
-          b.icon ?? null,
-          (b as unknown as Record<string, unknown>).icon_source ?? null,
-          (b as unknown as Record<string, unknown>).icon_background_color ?? null,
-          b.description ?? null,
-          openMethod,
-          Number.isFinite(b.sort) ? b.sort : 0,
-          b.created_at || now,
+          bookmark.id,
+          bookmark.category_id,
+          bookmark.title,
+          bookmark.url,
+          bookmark.icon,
+          bookmark.icon_source,
+          bookmark.icon_background_color,
+          bookmark.description,
+          bookmark.open_method,
+          bookmark.sort,
+          bookmark.created_at,
         ),
     )
   }
@@ -549,7 +573,14 @@ export async function importData(
   }
 
   await db.batch(stmts)
-  return { categories: data.categories.length, bookmarks: data.bookmarks.length }
+  importedCategories.sort((a, b) => a.sort - b.sort || a.id - b.id)
+  importedBookmarks.sort((a, b) => a.sort - b.sort || a.id - b.id)
+  return {
+    categories: importedCategories.length,
+    bookmarks: importedBookmarks.length,
+    importedCategories,
+    importedBookmarks,
+  }
 }
 
 // ========== schema 迁移（幂等，仅缺列时添加） ==========
