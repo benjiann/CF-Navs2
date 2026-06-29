@@ -43,7 +43,6 @@
   import type { ImportSource } from '../lib/importData'
   import { iconifyProxyIcon, isIconifyIconUrl } from '../lib/icons'
   import CategoryEditModal from '../components/CategoryEditModal.svelte'
-  import LoginModal from '../components/LoginModal.svelte'
   import SettingsPanel from '../components/SettingsPanel.svelte'
 
   type SortableInstance = {
@@ -80,7 +79,6 @@
 
   export let isAuthenticated = false
   export let authLoading = false
-  export let authError = ''
   export let categories: AdminCategory[] = []
   export let bookmarks: AdminBookmark[] = []
   export let categoriesLoading = false
@@ -89,7 +87,6 @@
   export let deletingCategoryId: string | number | null = null
   export let deletingBookmarkId: string | number | null = null
   export let categoryError = ''
-  export let loginModalOpen = false
   export let categoryModalOpen = false
   export let settingsLoading = false
   export let settingsSaving = false
@@ -129,10 +126,6 @@
   $: imageHostUrl = settingsValue?.image_host_url ?? ''
 
   export let onOpenLogin: (() => AsyncVoid) | undefined = undefined
-  export let onCloseLogin: (() => AsyncVoid) | undefined = undefined
-  export let onLogin:
-    | ((payload: { username: string; password: string }) => AsyncVoid)
-    | undefined = undefined
   export let onLogout: (() => AsyncVoid) | undefined = undefined
   export let onSwitchToHome: (() => AsyncVoid) | undefined = undefined
 
@@ -696,14 +689,6 @@
     </div>
   </div>
 </div>
-
-<LoginModal
-  open={loginModalOpen}
-  loading={authLoading}
-  error={authError}
-  onSubmit={onLogin}
-  onCancel={onCloseLogin}
-/>
 
 <CategoryEditModal
   open={categoryModalOpen}

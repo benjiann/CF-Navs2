@@ -21,7 +21,7 @@
   import { prepareImportPayload, type ImportSource } from './lib/importData'
   import { adminStore, authStore, configStore, isAuthenticated, publicStore } from './lib/stores'
 
-  type AppView = 'home' | 'admin'
+  type AppView = 'home' | 'admin' | 'login'
 
   type CategoryFormValue = {
     id?: string | number
@@ -45,8 +45,10 @@
   let rootError = ''
   let currentView: AppView = 'home'
   let AdminComponent: typeof import('./views/Admin.svelte').default | null = null
+  let LoginModalComponent: typeof import('./components/LoginModal.svelte').default | null = null
   let BookmarkEditModalComponent: typeof import('./components/BookmarkEditModal.svelte').default | null = null
   let adminComponentPromise: Promise<void> | null = null
+  let loginModalPromise: Promise<void> | null = null
   let bookmarkEditModalPromise: Promise<void> | null = null
 
   let loginModalOpen = false
@@ -219,8 +221,9 @@
   $: settingsValue = toSettingsForm(adminData.settings)
 
   $: if (!booting && currentView === 'home' && !canSeeHome) {
-    void ensureAdminComponent()
-    currentView = 'admin'
+    void ensureLoginModalComponent()
+    loginModalOpen = true
+    currentView = 'login'
   }
 
   function buildHomeBackground(settings: PublicSettings | null): string {
@@ -278,6 +281,16 @@
       })
     }
     return adminComponentPromise
+  }
+
+  function ensureLoginModalComponent(): Promise<void> {
+    if (LoginModalComponent) return Promise.resolve()
+    if (!loginModalPromise) {
+      loginModalPromise = import('./components/LoginModal.svelte').then((module) => {
+        LoginModalComponent = module.default
+      })
+    }
+    return loginModalPromise
   }
 
   function ensureBookmarkEditModalComponent(): Promise<void> {
@@ -533,9 +546,10 @@
       await refreshPublicData()
     }
 
-    const nextView: AppView = get(configStore).data?.public_mode === false && !isLoggedIn() ? 'admin' : 'home'
-    if (nextView === 'admin') {
-      await ensureAdminComponent()
+    const nextView: AppView = get(configStore).data?.public_mode === false && !isLoggedIn() ? 'login' : 'home'
+    if (nextView === 'login') {
+      await ensureLoginModalComponent()
+      loginModalOpen = true
     }
     currentView = nextView
     booting = false
@@ -607,17 +621,30 @@
   async function handleOpenLogin(): Promise<void> {
     rootError = ''
     authStore.resetError()
-    await ensureAdminComponent()
+    await ensureLoginModalComponent()
     loginModalOpen = true
-    currentView = 'admin'
+    if (!canSeeHome) {
+      currentView = 'login'
+    }
   }
 
   async function handleCloseLogin(): Promise<void> {
-    loginModalOpen = false
     authStore.resetError()
+    if (!canSeeHome) {
+      loginModalOpen = true
+      currentView = 'login'
+      return
+    }
+
+    loginModalOpen = false
   }
 
   async function handleSwitchToAdmin(): Promise<void> {
+    if (!isLoggedIn()) {
+      await handleOpenLogin()
+      return
+    }
+
     await ensureAdminComponent()
     currentView = 'admin'
   }
@@ -649,8 +676,11 @@
         applyConfigFromSettings(previousSettings)
       }
       await refreshPublicData()
-      const nextView: AppView = get(configStore).data?.public_mode === false ? 'admin' : 'home'
-      if (nextView === 'admin') await ensureAdminComponent()
+      const nextView: AppView = get(configStore).data?.public_mode === false ? 'login' : 'home'
+      if (nextView === 'login') {
+        await ensureLoginModalComponent()
+        loginModalOpen = true
+      }
       currentView = nextView
     } catch (error) {
       rootError = getErrorMessage(error)
@@ -965,12 +995,19 @@
           onOpenLogin={handleOpenLogin}
         />
       </div>
+    {:else if currentView === 'login'}
+      <div class="app-splash">
+        <div class="app-splash-card">
+          <p class="eyebrow">CF-Navs</p>
+          <h1>请先登录管理员账号</h1>
+          <p>当前站点未公开，登录后再加载后台管理界面。</p>
+        </div>
+      </div>
     {:else if AdminComponent}
       <svelte:component
         this={AdminComponent}
         isAuthenticated={$isAuthenticated}
         authLoading={$authStore.loading}
-        authError={$authStore.error ?? ''}
         categories={adminCategories}
         bookmarks={adminBookmarks}
         categoriesLoading={$adminStore.loading}
@@ -983,14 +1020,11 @@
         settingsSaving={savingSettings}
         settingsError={settingsError}
         settingsValue={settingsValue}
-        loginModalOpen={loginModalOpen}
         categoryModalOpen={categoryModalOpen}
         categoryModalMode={categoryModalMode}
         activeCategory={activeCategory}
         canSeeHome={canSeeHome}
         onOpenLogin={handleOpenLogin}
-        onCloseLogin={handleCloseLogin}
-        onLogin={handleLogin}
         onLogout={handleLogout}
         onSwitchToHome={() => { currentView = 'home' }}
         onOpenCreateCategory={handleOpenCreateCategory}
@@ -1017,6 +1051,17 @@
           <h1>正在加载后台...</h1>
         </div>
       </div>
+    {/if}
+
+    {#if LoginModalComponent}
+      <svelte:component
+        this={LoginModalComponent}
+        open={loginModalOpen}
+        loading={$authStore.loading}
+        error={$authStore.error ?? ''}
+        onSubmit={handleLogin}
+        onCancel={handleCloseLogin}
+      />
     {/if}
 
     {#if BookmarkEditModalComponent}
