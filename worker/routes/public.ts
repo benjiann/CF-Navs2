@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { ErrCode, type PublicData, type PublicSettings, type Settings, type SiteConfig } from '../../shared/types'
 import {
+  cachePrivatePublicDataResponse,
   cachePublicDataResponse,
   cacheSiteConfigResponse,
   matchPublicDataCache,
@@ -61,13 +62,17 @@ publicRoutes.get('/public/data', async (c) => {
   const publicSettings = publicDataSource.settings
   if (!publicSettings.public_mode) {
     if (!token) {
-      return c.json({
+      const response = c.json({
         ...fail(ErrCode.FORBIDDEN, 'forbidden'),
         data: {
           site_title: publicSettings.site_title,
           public_mode: false,
         },
+      }, 200, {
+        'Cache-Control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=120',
       })
+      cachePrivatePublicDataResponse(c, c.req.url, response)
+      return response
     }
 
     const session = await validateSession(c.env, token)

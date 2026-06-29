@@ -1,6 +1,7 @@
 const PUBLIC_DATA_CACHE_PATH = '/api/public/data'
 const PUBLIC_DATA_BROWSER_TTL = 30
 const PUBLIC_DATA_EDGE_TTL = 120
+const PRIVATE_PUBLIC_DATA_EDGE_TTL = 60
 const SITE_CONFIG_CACHE_PATH = '/api/config'
 const SITE_CONFIG_BROWSER_TTL = 15
 const SITE_CONFIG_EDGE_TTL = 60
@@ -44,6 +45,15 @@ export function cachePublicDataResponse(c: unknown, requestUrl: string, response
   cached.headers.set(
     'Cache-Control',
     `public, max-age=${PUBLIC_DATA_BROWSER_TTL}, s-maxage=${PUBLIC_DATA_EDGE_TTL}, stale-while-revalidate=300`,
+  )
+  waitUntil(c, edgeCache().put(publicDataCacheRequest(requestUrl), cached))
+}
+
+export function cachePrivatePublicDataResponse(c: unknown, requestUrl: string, response: Response): void {
+  const cached = response.clone()
+  cached.headers.set(
+    'Cache-Control',
+    `public, max-age=0, s-maxage=${PRIVATE_PUBLIC_DATA_EDGE_TTL}, stale-while-revalidate=120`,
   )
   waitUntil(c, edgeCache().put(publicDataCacheRequest(requestUrl), cached))
 }

@@ -177,7 +177,7 @@ SESSION_TTL = "604800"             # 会话有效期（7天）
 ### 前端
 - Vite 快速构建
 - 首页主包、后台管理和书签编辑弹窗代码分割，后台功能按需加载
-- 首页启动优先使用 `/api/public/data` 派生站点配置，公开关闭时复用 1005 响应中的轻量配置进入登录页
+- 首页启动优先使用 `/api/public/data` 派生站点配置，公开关闭时复用 1005 响应中的轻量配置进入登录页，匿名 1005 会短时走 edge cache
 - Worker 为非 HTML 的 `/assets/*` hash 构建产物设置一年 immutable 缓存，为 HTML 和 `sw.js` 设置 no-cache 重验证
 - CSS 压缩
 - 图标代理响应由 Service Worker cache-first 读取，页面滚动、搜索筛选和设置保存后优先命中本地缓存
@@ -192,7 +192,7 @@ SESSION_TTL = "604800"             # 会话有效期（7天）
 - KV 会话缓存
 - Worker 边缘计算
 - `/api/config` 使用短 TTL Cloudflare edge cache，设置保存和导入后主动失效
-- 匿名 `/api/public/data` 使用 Cloudflare edge cache，命中时不读取 D1；写入接口负责失效缓存
+- 匿名 `/api/public/data` 使用 Cloudflare edge cache，命中时不读取 D1；私有模式下的匿名 1005 响应也短时缓存到 edge，写入接口负责失效缓存
 - `/api/admin/data` 合并后台进入时的数据读取，分类、书签和 settings 使用 D1 batch 读取
 - `/api/public/data` 缓存未命中时用一次 D1 batch 合并公开 settings、分类和书签读取，并只读取首页公开字段，不返回 `created_at` 等管理字段
 - 公开聚合、后台聚合、书签列表和图标详情等读取路径跳过预检查式 schema 迁移，仅在旧库缺列错误时迁移并重试一次
