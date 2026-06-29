@@ -192,7 +192,7 @@ SESSION_TTL = "604800"             # 会话有效期（7天）
 - KV 会话缓存
 - Worker 边缘计算
 - `/api/config` 使用短 TTL Cloudflare edge cache，设置保存和导入后主动失效
-- 匿名 `/api/public/data` 使用 Cloudflare edge cache，命中时不读取 D1；cache miss 时先轻量读取 `site_title/public_mode`，私有模式下的匿名 1005 响应也短时缓存到 edge，写入接口负责失效缓存
+- 匿名 `/api/public/data` 使用 Cloudflare edge cache，命中时不读取 D1；cache miss 时优先复用 `/api/config` edge cache，没有命中才轻量读取 `site_title/public_mode` 并预热配置缓存，私有模式下的匿名 1005 响应也短时缓存到 edge，写入接口负责失效缓存
 - `/api/admin/data` 合并后台进入时的数据读取，分类、书签和 settings 使用 D1 batch 读取
 - `/api/public/data` 确认公开后用一次 D1 batch 合并公开 settings、分类和书签读取，并只读取首页公开字段，不返回 `created_at` 等管理字段
 - 公开聚合、后台聚合、书签列表和图标详情等读取路径跳过预检查式 schema 迁移，仅在旧库缺列错误时迁移并重试一次

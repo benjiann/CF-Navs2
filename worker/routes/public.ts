@@ -1,5 +1,12 @@
 import { Hono } from 'hono'
-import { ErrCode, type PublicData, type PublicSettings, type Settings, type SiteConfig } from '../../shared/types'
+import {
+  ErrCode,
+  type ApiResponse,
+  type PublicData,
+  type PublicSettings,
+  type Settings,
+  type SiteConfig,
+} from '../../shared/types'
 import {
   cachePrivatePublicDataResponse,
   cachePublicDataResponse,
@@ -37,6 +44,33 @@ function toPublicSettings(settings: Settings): PublicSettings {
   }
 }
 
+function isSiteConfig(value: unknown): value is SiteConfig {
+  if (!value || typeof value !== 'object') return false
+  const candidate = value as Partial<SiteConfig>
+  return typeof candidate.site_title === 'string' && typeof candidate.public_mode === 'boolean'
+}
+
+async function readCachedSiteConfig(requestUrl: string): Promise<SiteConfig | null> {
+  const cached = await matchSiteConfigCache(requestUrl)
+  if (!cached) return null
+
+  try {
+    const payload = await cached.clone().json<ApiResponse<SiteConfig>>()
+    return isSiteConfig(payload.data) ? payload.data : null
+  } catch {
+    return null
+  }
+}
+
+function cacheSiteConfigData(c: Parameters<typeof cacheSiteConfigResponse>[0], requestUrl: string, data: SiteConfig): void {
+  const response = Response.json(ok(data), {
+    headers: {
+      'Cache-Control': 'public, max-age=15, s-maxage=60, stale-while-revalidate=300',
+    },
+  })
+  cacheSiteConfigResponse(c, requestUrl, response)
+}
+
 export const publicRoutes = new Hono<HonoEnv>()
 
 publicRoutes.get('/config', async (c) => {
@@ -59,7 +93,11 @@ publicRoutes.get('/public/data', async (c) => {
     if (cached) return cached
   }
 
-  const siteConfig = await getSiteConfig(c.env.DB)
+  const cachedSiteConfig = await readCachedSiteConfig(c.req.url)
+  const siteConfig = cachedSiteConfig ?? await getSiteConfig(c.env.DB)
+  if (!cachedSiteConfig) {
+    cacheSiteConfigData(c, c.req.url, siteConfig)
+  }
   if (!siteConfig.public_mode) {
     if (!token) {
       const response = c.json({

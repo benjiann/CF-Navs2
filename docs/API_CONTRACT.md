@@ -13,7 +13,7 @@
 ## 鉴权规则
 
 - `authRequired`：读取 Bearer token，查 KV session；无效时返回 401。
-- `/api/public/data`：匿名请求先查公开数据 edge cache；缓存未命中时先读取轻量 `site_title/public_mode`，公开模式关闭则要求有效 token，否则返回 `code=1005`，该轻量 1005 响应也会短时写入 edge cache。
+- `/api/public/data`：匿名请求先查公开数据 edge cache；缓存未命中时先复用 `/api/config` edge cache，仍未命中才读取轻量 `site_title/public_mode`，公开模式关闭则要求有效 token，否则返回 `code=1005`，该轻量 1005 响应也会短时写入 edge cache。
 
 ## 公开接口
 
@@ -23,7 +23,7 @@
 | GET | `/api/config` | 无 | `SiteConfig` |
 | GET | `/api/public/data` | 公开模式或登录 | `PublicData` |
 
-`/api/config` 使用短 TTL Cloudflare edge cache，设置保存或数据导入后会主动失效，主要作为兼容和兜底轻量配置接口。前端普通启动路径优先使用 `/api/public/data` 或 `/api/admin/data` 派生站点配置；公开模式关闭时，匿名 `/api/public/data` 的 1005 响应会在 `data` 中携带 `{ site_title, public_mode: false }`，登录页无需再额外请求 `/api/config`。该 1005 响应使用浏览器 `max-age=0` 和短 edge TTL，避免本地浏览器缓存卡住公开模式切换，同时减少私有站点匿名访问对 D1 的重复读取。`/api/public/data` 只查询并返回首页渲染需要的公开设置、分类和书签字段，不包含 `admin_username`、`admin_password`、`public_mode`、`custom_css`、`custom_js` 等内部或未使用设置字段，也不包含分类/书签的 `created_at` 管理字段；匿名公开访问会先查短 TTL edge cache，命中时直接返回而不读取 D1。前端首页刷新默认匿名请求以保留 edge cache 命中，只有公开模式关闭且本地已登录时才带 token 重试；服务端收到带登录态请求时仍会绕过匿名缓存。缓存未命中时，服务端先用轻量配置判断是否公开，公开时再通过一次 D1 batch 聚合读取公开 settings、分类和书签。
+`/api/config` 使用短 TTL Cloudflare edge cache，设置保存或数据导入后会主动失效，主要作为兼容和兜底轻量配置接口。前端普通启动路径优先使用 `/api/public/data` 或 `/api/admin/data` 派生站点配置；公开模式关闭时，匿名 `/api/public/data` 的 1005 响应会在 `data` 中携带 `{ site_title, public_mode: false }`，登录页无需再额外请求 `/api/config`。该 1005 响应使用浏览器 `max-age=0` 和短 edge TTL，避免本地浏览器缓存卡住公开模式切换，同时减少私有站点匿名访问对 D1 的重复读取。`/api/public/data` 只查询并返回首页渲染需要的公开设置、分类和书签字段，不包含 `admin_username`、`admin_password`、`public_mode`、`custom_css`、`custom_js` 等内部或未使用设置字段，也不包含分类/书签的 `created_at` 管理字段；匿名公开访问会先查短 TTL edge cache，命中时直接返回而不读取 D1。前端首页刷新默认匿名请求以保留 edge cache 命中，只有公开模式关闭且本地已登录时才带 token 重试；服务端收到带登录态请求时仍会绕过匿名缓存。缓存未命中时，服务端先复用或预热 `/api/config` 的轻量 edge cache 来判断是否公开，公开时再通过一次 D1 batch 聚合读取公开 settings、分类和书签。
 
 ## 认证接口
 
