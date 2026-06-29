@@ -16,13 +16,13 @@ const CACHE_TIMEOUT_MS = 5000
 const MAX_ICON_SIZE = 256_000
 const ICON_ACCEPT = 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.1'
 const SUCCESS_CACHE = 'public, max-age=604800, s-maxage=2592000, immutable'
-const MISS_CACHE = 'public, max-age=300, s-maxage=300'
+const FAILURE_CACHE = 'no-store'
 
 function errorResponse(message: string, status: number): Response {
   return new Response(message, {
     status,
     headers: {
-      'Cache-Control': MISS_CACHE,
+      'Cache-Control': FAILURE_CACHE,
     },
   })
 }
@@ -52,7 +52,7 @@ function fallbackIconResponse(title: string, url: string): Response {
     status: 200,
     headers: {
       'Content-Type': 'image/svg+xml; charset=utf-8',
-      'Cache-Control': MISS_CACHE,
+      'Cache-Control': FAILURE_CACHE,
       'X-Icon-Fallback': '1',
     },
   })
@@ -165,7 +165,7 @@ function isIconifyIconUrl(value: string): boolean {
 iconRoutes.get('/iconify/:prefix/:name', async (c) => {
   const iconUrl = iconifyUrlFromParams(c.req.param('prefix'), c.req.param('name'))
   if (!iconUrl) {
-    return new Response('invalid iconify icon', { status: 400 })
+    return errorResponse('invalid iconify icon', 400)
   }
 
   try {
@@ -191,7 +191,7 @@ iconRoutes.get('/iconify/:prefix/:name', async (c) => {
 iconRoutes.get('/icon/:id', async (c) => {
   const id = Number(c.req.param('id'))
   if (!Number.isInteger(id) || id <= 0) {
-    return new Response('invalid id', { status: 400 })
+    return errorResponse('invalid id', 400)
   }
 
   try {
@@ -204,25 +204,28 @@ iconRoutes.get('/icon/:id', async (c) => {
     const bookmark = await getBookmarkIconData(c.env.DB, id)
     if (bookmark?.icon_blob) {
       const response = dataUriToResponse(bookmark.icon_blob)
-      if (!response) return errorResponse('invalid blob', 500)
-      cacheResponse(c, c.req.raw, response)
-      return response
+      if (!response) {
+        await setIconBlob(c.env.DB, id, null)
+      } else {
+        cacheResponse(c, c.req.raw, response)
+        return response
+      }
     }
 
     if (!bookmark?.icon) {
-      return errorResponse('icon not found', 404)
+      return fallbackIconResponse(bookmark?.title ?? '', bookmark?.url ?? '')
     }
 
     if (bookmark.icon.startsWith('data:image/')) {
       await setIconBlob(c.env.DB, id, bookmark.icon)
       const response = dataUriToResponse(bookmark.icon)
-      if (!response) return errorResponse('invalid data uri', 500)
+      if (!response) return fallbackIconResponse(bookmark.title, bookmark.url)
       cacheResponse(c, c.req.raw, response)
       return response
     }
 
     if (!/^https?:\/\//i.test(bookmark.icon)) {
-      return errorResponse('unsupported icon', 404)
+      return fallbackIconResponse(bookmark.title, bookmark.url)
     }
 
     const fetchedIcon = await fetchIcon(bookmark.icon)
@@ -241,14 +244,14 @@ iconRoutes.get('/icon/:id', async (c) => {
     cacheResponse(c, c.req.raw, response)
     return response
   } catch {
-    return new Response('server error', { status: 500 })
+    return fallbackIconResponse('', '')
   }
 })
 
 iconRoutes.get('/category-icon/:id', async (c) => {
   const id = Number(c.req.param('id'))
   if (!Number.isInteger(id) || id <= 0) {
-    return new Response('invalid id', { status: 400 })
+    return errorResponse('invalid id', 400)
   }
 
   try {
@@ -260,12 +263,12 @@ iconRoutes.get('/category-icon/:id', async (c) => {
 
     const category = await getCategory(c.env.DB, id)
     if (!category?.icon) {
-      return errorResponse('icon not found', 404)
+      return fallbackIconResponse(category?.title ?? '', '')
     }
 
     if (category.icon.startsWith('data:image/')) {
       const response = dataUriToResponse(category.icon)
-      if (!response) return errorResponse('invalid data uri', 500)
+      if (!response) return fallbackIconResponse(category.title, '')
       cacheResponse(c, c.req.raw, response)
       return response
     }
@@ -283,6 +286,6 @@ iconRoutes.get('/category-icon/:id', async (c) => {
     cacheResponse(c, c.req.raw, response)
     return response
   } catch {
-    return new Response('server error', { status: 500 })
+    return fallbackIconResponse('', '')
   }
 })
