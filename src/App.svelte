@@ -12,8 +12,6 @@
     Settings,
   } from '../shared/types'
   import Home from './views/Home.svelte'
-  import Admin from './views/Admin.svelte'
-  import BookmarkEditModal from './components/BookmarkEditModal.svelte'
   import { api, getErrorMessage } from './lib/api'
   import { colorToRgbString } from './lib/color'
   import { prepareImportPayload, type ImportSource } from './lib/importData'
@@ -42,6 +40,10 @@
   let booting = true
   let rootError = ''
   let currentView: AppView = 'home'
+  let AdminComponent: typeof import('./views/Admin.svelte').default | null = null
+  let BookmarkEditModalComponent: typeof import('./components/BookmarkEditModal.svelte').default | null = null
+  let adminComponentPromise: Promise<void> | null = null
+  let bookmarkEditModalPromise: Promise<void> | null = null
 
   let loginModalOpen = false
   let categoryModalOpen = false
@@ -147,6 +149,7 @@
   $: settingsValue = toSettingsForm(adminData.settings)
 
   $: if (!booting && currentView === 'home' && !canSeeHome) {
+    void ensureAdminComponent()
     currentView = 'admin'
   }
 
@@ -197,6 +200,26 @@
     return Boolean(get(authStore).session)
   }
 
+  function ensureAdminComponent(): Promise<void> {
+    if (AdminComponent) return Promise.resolve()
+    if (!adminComponentPromise) {
+      adminComponentPromise = import('./views/Admin.svelte').then((module) => {
+        AdminComponent = module.default
+      })
+    }
+    return adminComponentPromise
+  }
+
+  function ensureBookmarkEditModalComponent(): Promise<void> {
+    if (BookmarkEditModalComponent) return Promise.resolve()
+    if (!bookmarkEditModalPromise) {
+      bookmarkEditModalPromise = import('./components/BookmarkEditModal.svelte').then((module) => {
+        BookmarkEditModalComponent = module.default
+      })
+    }
+    return bookmarkEditModalPromise
+  }
+
   async function refreshPublicData(): Promise<PublicData | null> {
     if (get(configStore).data?.public_mode || isLoggedIn()) {
       try {
@@ -243,18 +266,19 @@
     booting = true
     rootError = ''
 
-    try {
-      await configStore.refresh()
-    } catch (error) {
-      rootError = getErrorMessage(error)
+    const [configResult, authResult] = await Promise.allSettled([
+      configStore.refresh(),
+      authStore.initialize(),
+    ])
+
+    if (configResult.status === 'rejected') {
+      rootError = getErrorMessage(configResult.reason)
       booting = false
       return
     }
 
-    try {
-      await authStore.initialize()
-    } catch (error) {
-      rootError = getErrorMessage(error)
+    if (authResult.status === 'rejected') {
+      rootError = getErrorMessage(authResult.reason)
     }
 
     if (isLoggedIn()) {
@@ -268,7 +292,11 @@
       await refreshPublicData()
     }
 
-    currentView = get(configStore).data?.public_mode === false && !isLoggedIn() ? 'admin' : 'home'
+    const nextView: AppView = get(configStore).data?.public_mode === false && !isLoggedIn() ? 'admin' : 'home'
+    if (nextView === 'admin') {
+      await ensureAdminComponent()
+    }
+    currentView = nextView
     booting = false
   }
 
@@ -338,6 +366,7 @@
   async function handleOpenLogin(): Promise<void> {
     rootError = ''
     authStore.resetError()
+    await ensureAdminComponent()
     loginModalOpen = true
     currentView = 'admin'
   }
@@ -347,6 +376,11 @@
     authStore.resetError()
   }
 
+  async function handleSwitchToAdmin(): Promise<void> {
+    await ensureAdminComponent()
+    currentView = 'admin'
+  }
+
   async function handleLogin(payload: { username: string; password: string }): Promise<void> {
     try {
       await authStore.login(payload.username, payload.password)
@@ -354,6 +388,7 @@
       rootError = ''
       await configStore.refresh()
       await refreshLoggedInData()
+      await ensureAdminComponent()
       currentView = 'admin'
     } catch {
       // authStore 已经记录错误
@@ -371,7 +406,9 @@
       adminStore.reset()
       await configStore.refresh()
       await refreshPublicData()
-      currentView = get(configStore).data?.public_mode === false ? 'admin' : 'home'
+      const nextView: AppView = get(configStore).data?.public_mode === false ? 'admin' : 'home'
+      if (nextView === 'admin') await ensureAdminComponent()
+      currentView = nextView
     } catch (error) {
       rootError = getErrorMessage(error)
     }
@@ -384,6 +421,7 @@
     }
 
     categoryError = ''
+    await ensureAdminComponent()
     categoryModalMode = 'create'
     activeCategory = { title: '', icon: '' }
     categoryModalOpen = true
@@ -450,6 +488,7 @@
 
     const fallbackCategoryId = categoryId ?? adminData.categories[0]?.id
     bookmarkError = ''
+    await ensureBookmarkEditModalComponent()
     bookmarkModalMode = 'create'
     activeBookmark = {
       category_id: fallbackCategoryId,
@@ -475,6 +514,7 @@
     if (!current) return
 
     bookmarkError = ''
+    await ensureBookmarkEditModalComponent()
     bookmarkModalMode = 'edit'
     activeBookmark = toBookmarkForm(current)
     bookmarkModalOpen = true
@@ -675,13 +715,14 @@
           authLoading={$authStore.loading}
           onOpenCreateBookmark={handleOpenCreateBookmark}
           onEditBookmark={handleEditBookmark}
-          onSwitchToAdmin={() => { currentView = 'admin' }}
+          onSwitchToAdmin={handleSwitchToAdmin}
           onLogout={handleLogout}
           onOpenLogin={handleOpenLogin}
         />
       </div>
-    {:else}
-      <Admin
+    {:else if AdminComponent}
+      <svelte:component
+        this={AdminComponent}
         isAuthenticated={$isAuthenticated}
         authLoading={$authStore.loading}
         authError={$authStore.error ?? ''}
@@ -724,21 +765,31 @@
         onExportData={handleExportData}
         onImportData={handleImportData}
       />
+    {:else}
+      <div class="app-splash">
+        <div class="app-splash-card">
+          <p class="eyebrow">CF-Navs</p>
+          <h1>正在加载后台...</h1>
+        </div>
+      </div>
     {/if}
 
-    <BookmarkEditModal
-      open={bookmarkModalOpen}
-      loading={savingBookmark}
-      error={bookmarkError}
-      mode={bookmarkModalMode}
-      value={activeBookmark}
-      categories={adminCategories.map((category) => ({ id: category.id, title: category.title }))}
-      onSubmit={handleSubmitBookmark}
-      onCancel={handleCloseBookmarkModal}
-      onFetchFavicon={handleFetchFavicon}
-      onDelete={handleDeleteBookmark}
-      deleting={deletingBookmarkId === Number(activeBookmark?.id)}
-      imageHostUrl={adminData.settings?.image_host_url ?? ''}
-    />
+    {#if BookmarkEditModalComponent}
+      <svelte:component
+        this={BookmarkEditModalComponent}
+        open={bookmarkModalOpen}
+        loading={savingBookmark}
+        error={bookmarkError}
+        mode={bookmarkModalMode}
+        value={activeBookmark}
+        categories={adminCategories.map((category) => ({ id: category.id, title: category.title }))}
+        onSubmit={handleSubmitBookmark}
+        onCancel={handleCloseBookmarkModal}
+        onFetchFavicon={handleFetchFavicon}
+        onDelete={handleDeleteBookmark}
+        deleting={deletingBookmarkId === Number(activeBookmark?.id)}
+        imageHostUrl={adminData.settings?.image_host_url ?? ''}
+      />
+    {/if}
   </div>
 {/if}

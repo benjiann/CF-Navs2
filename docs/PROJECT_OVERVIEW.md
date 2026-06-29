@@ -184,7 +184,7 @@ SESSION_TTL = "604800"             # 会话有效期（7天）
 - D1 索引优化
 - KV 会话缓存
 - Worker 边缘计算
-- `/api/icon/:id` 与 `/api/category-icon/:id` 统一代理外站图标，失败时返回临时 SVG fallback，不缓存第三方失败结果
+- `/api/icon/:id`、`/api/category-icon/:id` 与 `/api/iconify/:set/:name.svg` 统一代理外站图标，失败时返回临时 SVG fallback，不缓存第三方失败结果
 - 静态资源 CDN
 
 ### 网络

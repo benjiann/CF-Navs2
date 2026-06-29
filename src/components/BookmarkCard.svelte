@@ -34,8 +34,9 @@
       : `width: ${compactIconSize}px; height: ${compactIconSize}px;`
   $: cardLinkStyle = height > 0 ? `height: ${height}px;` : ''
   $: canUseExternalIconFallback =
-    (bookmark.icon_source === 'custom' && !isFaviconImIconUrl(bookmark.icon ?? '')) ||
-    (bookmark.icon_source === 'iconify' && isIconifyIconUrl(bookmark.icon ?? ''))
+    bookmark.icon_source === 'custom' &&
+    !isFaviconImIconUrl(bookmark.icon ?? '') &&
+    !isIconifyIconUrl(bookmark.icon ?? '')
   $: if (nextIconStateKey !== iconStateKey) {
     iconStateKey = nextIconStateKey
     useExternalIcon = false

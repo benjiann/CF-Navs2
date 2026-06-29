@@ -209,7 +209,7 @@ npm run deploy
 
 HTTP(S) 书签图标不会在首页直接请求原始外站地址，而是优先通过 `/api/icon/:id` 读取 D1 缓存和 Cloudflare 边缘缓存。分类图标通过 `/api/category-icon/:id` 代理加载。Favicon.im 或其他第三方图标服务限流、超时或返回错误时，后端会返回临时 SVG 文字图标，不会把失败结果写入长期缓存。
 
-Iconify 图标使用 `https://api.iconify.design/{set}/{name}.svg`，可在新增/编辑书签时填写 `mdi:home`、`simple-icons:github` 这类图标名。Service Worker 会对 `/api/icon/*`、`/api/category-icon/*` 和 Iconify SVG 使用 cache-first 策略；后台修改书签、配置或首页搜索筛选导致组件重新渲染时，仍优先读取本地缓存。部署新版后如浏览器仍使用旧逻辑，请强制刷新一次页面，让新版 Service Worker 激活。
+Iconify 图标使用 `https://api.iconify.design/{set}/{name}.svg` 作为保存格式，可在新增/编辑书签时填写 `mdi:home`、`simple-icons:github` 这类图标名，弹窗预览走 `/api/iconify/:set/:name.svg` 同源代理。Service Worker 会对 `/api/icon/*`、`/api/category-icon/*`、`/api/iconify/*` 和兼容旧版本的 Iconify SVG 使用 cache-first 策略；后台修改书签、配置或首页搜索筛选导致组件重新渲染时，仍优先读取本地缓存。部署新版后如浏览器仍使用旧逻辑，请强制刷新一次页面，让新版 Service Worker 激活。
 
 ### 访问性能
 
@@ -291,6 +291,7 @@ npm run deploy           # 构建并部署到 Cloudflare
 - `GET /api/fetch-favicon?url=` - 获取网站图标
 - `GET /api/icon/:id` - 读取书签图标代理缓存
 - `GET /api/category-icon/:id` - 读取分类图标代理缓存
+- `GET /api/iconify/:set/:name.svg` - 读取 Iconify 图标预览代理缓存
 
 ### 设置管理
 

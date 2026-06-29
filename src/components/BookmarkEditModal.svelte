@@ -6,6 +6,7 @@
     getIconCandidates,
     iconifyIcon,
     iconifyNameFromUrl,
+    iconifyProxyIcon,
     logoSurfIcon,
     normalizeIconifyName,
     type IconCandidate,
@@ -103,7 +104,8 @@
 
   $: currentLogoScheme = getLogoSchemeByName(selectedLogoSchemeName)
   $: normalizedIconifyName = normalizeIconifyName(iconifyName)
-  $: iconifyPreviewUrl = iconifyIcon(iconifyName)
+  $: iconifySourceUrl = iconifyIcon(iconifyName)
+  $: iconifyPreviewUrl = iconifyProxyIcon(iconifyName)
   $: logoPreviewText = (form.title.trim() || 'NAV').slice(0, 4)
   $: canShowLogoSchemes = Boolean(
     form.url.trim() &&
@@ -115,8 +117,8 @@
       form.icon = nextLogoIcon
     }
   }
-  $: if (form.icon_source === 'iconify' && normalizedIconifyName && form.icon !== iconifyPreviewUrl) {
-    form.icon = iconifyPreviewUrl
+  $: if (form.icon_source === 'iconify' && normalizedIconifyName && form.icon !== iconifySourceUrl) {
+    form.icon = iconifySourceUrl
   }
 
   function getLogoSchemeByName(name: string): LogoSurfColorScheme {
@@ -151,12 +153,12 @@
   }
 
   function selectIconifyIcon() {
-    if (!iconifyPreviewUrl) {
+    if (!iconifySourceUrl) {
       candidateError = '请输入有效的 Iconify 图标名，例如 mdi:home 或 simple-icons:github'
       return
     }
 
-    form.icon = iconifyPreviewUrl
+    form.icon = iconifySourceUrl
     form.icon_source = 'iconify'
     iconifyName = normalizedIconifyName
     candidateError = ''
@@ -207,6 +209,10 @@
   function getFormIconPreviewUrl(): string {
     if ((form.icon_source === 'favicon_im' || isFaviconImIconUrl(form.icon)) && form.url.trim()) {
       return logoSurfIcon(form.title.trim(), form.url.trim())
+    }
+
+    if (form.icon_source === 'iconify') {
+      return iconifyProxyIcon(iconifyNameFromUrl(form.icon) ?? iconifyName)
     }
 
     if (form.id != null && /^https?:\/\//i.test(form.icon)) {

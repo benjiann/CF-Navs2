@@ -114,6 +114,47 @@ function cacheResponse(c: AppContext, request: Request, response: Response) {
   executionCtx?.waitUntil(edgeCache.put(request, response.clone()))
 }
 
+function normalizeIconifyParam(value: string): string {
+  return decodeURIComponent(value).replace(/\.svg$/i, '').trim().toLowerCase()
+}
+
+function iconifyUrlFromParams(prefixParam: string, nameParam: string): string | null {
+  const prefix = normalizeIconifyParam(prefixParam)
+  const name = normalizeIconifyParam(nameParam)
+  if (!/^[a-z0-9-]+$/.test(prefix) || !/^[a-z0-9-]+$/.test(name)) {
+    return null
+  }
+
+  return `https://api.iconify.design/${encodeURIComponent(prefix)}/${encodeURIComponent(name)}.svg`
+}
+
+iconRoutes.get('/iconify/:prefix/:name', async (c) => {
+  const iconUrl = iconifyUrlFromParams(c.req.param('prefix'), c.req.param('name'))
+  if (!iconUrl) {
+    return new Response('invalid iconify icon', { status: 400 })
+  }
+
+  try {
+    const edgeCache = (caches as unknown as { default: Cache }).default
+    const cached = await edgeCache.match(c.req.raw)
+    if (cached) {
+      return cached
+    }
+
+    const blob = await fetchIconAsDataUri(iconUrl)
+    if (!blob) {
+      return fallbackIconResponse(c.req.param('name').replace(/\.svg$/i, ''), iconUrl)
+    }
+
+    const response = dataUriToResponse(blob)
+    if (!response) return errorResponse('invalid iconify icon', 500)
+    cacheResponse(c, c.req.raw, response)
+    return response
+  } catch {
+    return fallbackIconResponse(c.req.param('name').replace(/\.svg$/i, ''), iconUrl)
+  }
+})
+
 iconRoutes.get('/icon/:id', async (c) => {
   const id = Number(c.req.param('id'))
   if (!Number.isInteger(id) || id <= 0) {

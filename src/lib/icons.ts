@@ -69,6 +69,14 @@ export function iconifyIcon(value: string): string {
   return `https://api.iconify.design/${encodeURIComponent(prefix)}/${encodeURIComponent(name)}.svg`
 }
 
+export function iconifyProxyIcon(value: string): string {
+  const normalized = normalizeIconifyName(value)
+  if (!normalized) return ''
+
+  const [prefix, name] = normalized.split(':')
+  return `/api/iconify/${encodeURIComponent(prefix)}/${encodeURIComponent(name)}.svg`
+}
+
 export function iconifyNameFromUrl(value: string): string | null {
   try {
     const url = new URL(value)

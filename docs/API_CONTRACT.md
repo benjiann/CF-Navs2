@@ -68,6 +68,7 @@
 | GET | `/api/fetch-favicon?url=` | 登录 | 服务端解析目标站 favicon，失败回退 Google s2 |
 | GET | `/api/icon/:id` | 无 | 书签图标代理。优先返回 Cloudflare edge cache 和 D1 中缓存的图标 blob；无缓存时按书签保存的 HTTP(S) 图标地址服务端抓取并写回 D1；外站失败时返回临时 SVG 文字图标，并带 `X-Icon-Fallback: 1` |
 | GET | `/api/category-icon/:id` | 无 | 分类图标代理。优先返回 Cloudflare edge cache；HTTP(S) 分类图标由 Worker 服务端抓取；外站失败时返回临时 SVG 文字图标，并带 `X-Icon-Fallback: 1` |
+| GET | `/api/iconify/:set/:name.svg` | 无 | Iconify 图标预览代理。新增/编辑书签弹窗通过该同源代理预览 Iconify 图标，成功响应可被浏览器 Service Worker 与 Cloudflare edge cache 复用；失败时返回临时 SVG 文字图标，并带 `X-Icon-Fallback: 1` |
 
 图标来源包括：
 
@@ -75,12 +76,12 @@
 - `favicon_im`：使用 `https://favicon.im/{hostname}?larger=true`。
 - `logo_surf`：本地生成完整标题文字 SVG data URI，支持新增/编辑书签时选择 logo.surf 风格配色。
 - `google`：使用 Google s2 favicons 接口。
-- `iconify`：使用 Iconify SVG API，保存格式为 `https://api.iconify.design/{set}/{name}.svg`，例如 `mdi:home` 会转换为 `https://api.iconify.design/mdi/home.svg`。
+- `iconify`：使用 Iconify SVG API，保存格式为 `https://api.iconify.design/{set}/{name}.svg`，例如 `mdi:home` 会转换为 `https://api.iconify.design/mdi/home.svg`；新增/编辑弹窗预览通过 `/api/iconify/{set}/{name}.svg` 代理加载。
 - `custom`：手动填写 URL、表情或图床地址。
 
 创建或更新书签时，如果图标是 HTTP(S) 图片，后端会尝试异步缓存到 `bookmarks.icon_blob`。更新书签但图标地址未改变时不会清空已有 `icon_blob`。前台展示 HTTP(S) 书签图标时默认使用 `/api/icon/:id?v=...`，分类图标默认使用 `/api/category-icon/:id?v=...`，避免页面刷新、搜索筛选或设置保存后直接重复请求外站。
 
-前端不应直接把 `favicon.im` 图标地址渲染到 `<img>`。Favicon.im、Google s2、Iconify 或自定义外站图标都应通过图标代理展示；第三方服务限流、超时或 4xx/5xx 时，代理返回临时 SVG fallback，不写入长期缓存。Service Worker 对 `/api/icon/*`、`/api/category-icon/*` 和 `https://api.iconify.design/*.svg` 使用 cache-first 策略，但不会缓存带 `X-Icon-Fallback: 1` 的临时 fallback。
+前端不应直接把 `favicon.im` 或持久化的 Iconify 图标地址渲染到首页 `<img>`。Favicon.im、Google s2、Iconify 或自定义外站图标都应通过图标代理展示；第三方服务限流、超时或 4xx/5xx 时，代理返回临时 SVG fallback，不写入长期缓存。Service Worker 对 `/api/icon/*`、`/api/category-icon/*`、`/api/iconify/*` 和兼容旧版本的 `https://api.iconify.design/*.svg` 使用 cache-first 策略，但不会缓存带 `X-Icon-Fallback: 1` 的临时 fallback。
 
 ## 首页搜索行为
 
