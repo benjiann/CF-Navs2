@@ -160,17 +160,144 @@ function getLogoTextFontSize(text: string, size: number): number {
   return Math.max(1, Math.min(initialFontSize, fittedFontSize))
 }
 
+function tokenizeLogoText(value: string): string[] {
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  const tokens: string[] = []
+  let asciiWord = ''
+
+  for (const char of normalized) {
+    if (/^[A-Za-z0-9._-]$/.test(char)) {
+      asciiWord += char
+      continue
+    }
+
+    if (asciiWord) {
+      tokens.push(asciiWord)
+      asciiWord = ''
+    }
+
+    tokens.push(char)
+  }
+
+  if (asciiWord) {
+    tokens.push(asciiWord)
+  }
+
+  return tokens
+}
+
+function splitLongToken(token: string, maxUnits: number): string[] {
+  const parts: string[] = []
+  let current = ''
+
+  for (const char of token) {
+    const candidate = `${current}${char}`
+    if (current && estimateTextUnits(candidate) > maxUnits) {
+      parts.push(current)
+      current = char
+    } else {
+      current = candidate
+    }
+  }
+
+  if (current) {
+    parts.push(current)
+  }
+
+  return parts
+}
+
+function wrapLogoText(text: string, maxLines = 4): string[] {
+  const normalized = text.replace(/\s+/g, ' ').trim() || 'NAV'
+  const totalUnits = estimateTextUnits(normalized)
+  const cjkChars = [...normalized].filter((char) => !/^[\u0000-\u00ff]$/.test(char)).length
+  const targetLineUnits = cjkChars >= 2 ? 2 : 4
+  const desiredLines = Math.max(1, Math.min(maxLines, Math.ceil(totalUnits / targetLineUnits)))
+  const maxUnits = Math.max(targetLineUnits, totalUnits / desiredLines)
+  const tokens = tokenizeLogoText(normalized)
+  const lines: string[] = []
+  let current = ''
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index]
+    if (token === ' ' && !current) continue
+
+    const tokenParts = estimateTextUnits(token) > maxUnits && token !== ' '
+      ? splitLongToken(token, maxUnits)
+      : [token]
+
+    for (const part of tokenParts) {
+      if (part === ' ' && !current) continue
+      const candidate = `${current}${part}`
+      const hasRoomForMoreLines = lines.length < maxLines - 1
+
+      if (current && hasRoomForMoreLines && estimateTextUnits(candidate) > maxUnits) {
+        lines.push(current.trim())
+        current = part.trimStart()
+      } else {
+        current = candidate
+      }
+    }
+  }
+
+  if (current.trim()) {
+    lines.push(current.trim())
+  }
+
+  if (lines.length <= maxLines) {
+    return lines.length > 0 ? lines : ['NAV']
+  }
+
+  const mergedTail = lines.slice(maxLines - 1).join('')
+  return [...lines.slice(0, maxLines - 1), mergedTail]
+}
+
+function getLogoTextLayout(text: string, size: number): { lines: string[]; fontSize: number; lineHeight: number } {
+  const lines = wrapLogoText(text)
+  const maxLineUnits = Math.max(...lines.map(estimateTextUnits))
+  const maxWidth = size * 0.84
+  const maxHeight = size * 0.76
+  const lineHeight = lines.length <= 2 ? 1.08 : 1
+  const widthFit = maxWidth / maxLineUnits
+  const heightFit = maxHeight / (lines.length * lineHeight)
+  const singleLineFontSize = getLogoTextFontSize(text, size)
+  const preferredFontSize = lines.length === 1 ? singleLineFontSize : size * 0.34
+
+  return {
+    lines,
+    fontSize: Math.max(1, Math.min(preferredFontSize, widthFit, heightFit)),
+    lineHeight,
+  }
+}
+
+function logoTextElements(
+  lines: string[],
+  size: number,
+  fontSize: number,
+  lineHeight: number,
+  textColor: string,
+): string {
+  const lineHeightPx = fontSize * lineHeight
+  const firstY = size / 2 - ((lines.length - 1) * lineHeightPx) / 2
+
+  return lines
+    .map((line, index) => {
+      const y = firstY + index * lineHeightPx
+      return `<text x="50%" y="${y.toFixed(2)}" dominant-baseline="middle" text-anchor="middle" fill="${textColor}" font-size="${fontSize.toFixed(2)}" font-weight="normal" font-family="Impact,ImpactFallback,Arial Black,Arial,Helvetica,sans-serif">${escapeSvgText(line)}</text>`
+    })
+    .join('')
+}
+
 export function logoSurfIcon(title: string, url: string, scheme: LogoSurfColorScheme = DEFAULT_LOGO_SURF_SCHEME): string {
   const hostname = getHostname(url) || 'NAV'
   const text = title.trim() || hostname
   const size = 512
   const radius = 80
-  const fontSize = getLogoTextFontSize(text, size)
-  const safeText = escapeSvgText(text)
+  const layout = getLogoTextLayout(text, size)
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
   <rect width="${size}" height="${size}" rx="${radius}" ry="${radius}" fill="${scheme.bgColor}"/>
-  <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" fill="${scheme.textColor}" font-size="${fontSize.toFixed(2)}" font-weight="normal" font-family="Impact,ImpactFallback,Arial Black,Arial,Helvetica,sans-serif">${safeText}</text>
+  ${logoTextElements(layout.lines, size, layout.fontSize, layout.lineHeight, scheme.textColor)}
 </svg>`
 
   const encoded = encodeURIComponent(svg)

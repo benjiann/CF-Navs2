@@ -209,7 +209,7 @@
     align-items: center;
     justify-content: center;
     color: #0f172a;
-    font-size: 1.15rem;
+    font-size: 1.5rem;
     font-weight: 700;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -232,19 +232,41 @@
   }
 
   .add-link-button {
-    border: 0;
+    border: 1px solid rgba(255, 255, 255, 0.42);
     border-radius: 999px;
     padding: 0.45rem 0.8rem;
-    background: rgba(37, 99, 235, 0.12);
-    color: #1d4ed8;
+    background:
+      linear-gradient(135deg, rgb(var(--card-bg-rgb, 255 255 255) / calc(var(--card-bg-opacity, 0.9) * 0.78)), rgba(255, 255, 255, 0.28)),
+      rgb(var(--card-bg-rgb, 255 255 255) / calc(var(--card-bg-opacity, 0.9) * 0.62));
+    color: var(--card-text-color, currentColor);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.52),
+      0 8px 18px rgba(15, 23, 42, 0.1);
+    backdrop-filter: blur(12px) saturate(1.12);
+    -webkit-backdrop-filter: blur(12px) saturate(1.12);
     font-size: 0.86rem;
     font-weight: 600;
     cursor: pointer;
+    transition:
+      transform 0.18s ease,
+      border-color 0.18s ease,
+      background 0.18s ease,
+      box-shadow 0.18s ease;
   }
 
   .add-link-button.ghost {
-    background: rgba(148, 163, 184, 0.16);
-    color: #475569;
+    background:
+      linear-gradient(135deg, rgb(var(--card-bg-rgb, 255 255 255) / calc(var(--card-bg-opacity, 0.9) * 0.52)), rgba(255, 255, 255, 0.16)),
+      rgb(var(--card-bg-rgb, 255 255 255) / calc(var(--card-bg-opacity, 0.9) * 0.38));
+    color: var(--card-text-color, currentColor);
+  }
+
+  .add-link-button:hover:not(:disabled) {
+    border-color: rgba(255, 255, 255, 0.62);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.64),
+      0 12px 24px rgba(15, 23, 42, 0.14);
+    transform: translateY(-1px);
   }
 
   .add-link-button:disabled {
@@ -321,8 +343,27 @@
   }
 
   :global([data-theme='dark']) .add-link-button {
-    background: rgba(59, 130, 246, 0.22);
-    color: #93c5fd;
+    border-color: rgba(148, 163, 184, 0.28);
+    background:
+      linear-gradient(135deg, rgb(var(--card-bg-rgb, 15 23 42) / calc(var(--card-bg-opacity, 0.9) * 0.82)), rgba(15, 23, 42, 0.38)),
+      rgb(var(--card-bg-rgb, 15 23 42) / calc(var(--card-bg-opacity, 0.9) * 0.66));
+    color: var(--card-text-color, currentColor);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 8px 18px rgba(0, 0, 0, 0.2);
+  }
+
+  :global([data-theme='dark']) .add-link-button.ghost {
+    background:
+      linear-gradient(135deg, rgb(var(--card-bg-rgb, 15 23 42) / calc(var(--card-bg-opacity, 0.9) * 0.62)), rgba(15, 23, 42, 0.26)),
+      rgb(var(--card-bg-rgb, 15 23 42) / calc(var(--card-bg-opacity, 0.9) * 0.48));
+  }
+
+  :global([data-theme='dark']) .add-link-button:hover:not(:disabled) {
+    border-color: rgba(203, 213, 225, 0.38);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 12px 24px rgba(0, 0, 0, 0.28);
   }
 
   :global([data-theme='dark']) .section-title-wrap p {

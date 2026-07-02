@@ -88,7 +88,7 @@
 
 - `direct`：服务端解析目标站 HTML 的 `<link rel="icon">`，再回退 `/favicon.ico` 和 Google。
 - `favicon_im`：使用 `https://favicon.im/{hostname}?larger=true`。
-- `logo_surf`：本地生成完整标题文字 SVG data URI，支持新增/编辑书签时选择 logo.surf 风格配色。
+- `logo_surf`：本地生成完整标题文字 SVG data URI，支持新增/编辑书签时选择 logo.surf 风格配色；中文标题优先按两个字一行换行，长标题最多 4 行并自动缩放字号。
 - `google`：使用 Google s2 favicons 接口。
 - `iconify`：使用 Iconify SVG API，保存格式为 `https://api.iconify.design/{set}/{name}.svg`，例如 `mdi:home` 或 `https://icon-sets.iconify.design/mdi/home/` 会转换为 `https://api.iconify.design/mdi/home.svg`；新增/编辑弹窗会展示 Iconify 候选，候选、手动输入预览和 icon-sets 页面链接都通过 `/api/iconify/{set}/{name}.svg` 代理加载。
 - `custom`：手动填写 URL、表情、纯文字或图床地址。非 URL / 非 data URI 的值会在首页按文本图标直接渲染。
