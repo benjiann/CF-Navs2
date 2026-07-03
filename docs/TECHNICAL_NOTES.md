@@ -57,7 +57,7 @@ https://api.iconify.design/{set}/{name}.svg
 GET /api/public/data
 ```
 
-该接口返回首页实际需要的轻量 settings、分类和书签字段。公开模式开启时，匿名访问可以命中 Cloudflare edge cache；公开模式关闭时，匿名响应会携带轻量站点配置，供登录页展示使用。
+该接口返回首页实际需要的轻量 settings、分类和书签字段。未携带 no-cache 指令的匿名访问可以命中 Cloudflare edge cache；公开模式关闭时，匿名响应会携带轻量站点配置，供登录页展示使用。前端应用请求聚合数据时默认带 `Cache-Control: no-cache`、`Pragma: no-cache` 和 fetch `cache: "no-store"`，让手动刷新和多端设备切换时直接向 Worker/D1 确认最新数据。
 
 后台进入或首页管理操作需要完整数据时，再请求：
 
@@ -65,7 +65,7 @@ GET /api/public/data
 GET /api/admin/data
 ```
 
-后台聚合接口一次返回分类、书签和完整设置。前端会按当前登录态写入浏览器本地快照，刷新页面或前后台切换时优先使用快照，减少重复请求。
+后台聚合接口一次返回分类、书签和完整设置。前端会按当前登录态写入浏览器本地快照，刷新页面时可以先用快照恢复界面，但不会因此短路远端同步；随后会用 no-cache 请求 `/api/admin/data` 更新 store。页面重新获得焦点、从 bfcache 恢复、回到可见状态，以及保持可见时的周期检查都会触发远端刷新，并用短节流避免频繁请求。
 
 ## 设置与数据写入
 
@@ -91,6 +91,7 @@ GET /api/admin/data
 Worker 和前端共同承担缓存：
 
 - `/api/config` 和 `/api/public/data` 使用短 TTL edge cache。
+- 前端应用的聚合数据请求默认发送 no-cache 指令；服务端收到后会跳过 `/api/config`、`/api/public/data` edge cache 和 `/api/admin/data` 运行时聚合缓存，用于保证跨设备刷新可见。
 - 设置保存、数据导入和管理端写入会主动失效相关缓存。
 - `/assets/*` 构建产物设置一年 immutable 缓存。
 - HTML 和 `sw.js` 使用 no-cache 重验证。

@@ -55,6 +55,10 @@ const JSON_HEADERS = {
   accept: 'application/json',
   'content-type': 'application/json',
 }
+const NO_CACHE_HEADERS = {
+  'cache-control': 'no-cache',
+  pragma: 'no-cache',
+}
 
 let apiBaseUrl = '/api'
 let cachedAuthSession: StoredAuthSession | null | undefined = undefined
@@ -314,15 +318,16 @@ function jsonRequest<T>(path: string, method: string, body?: unknown, auth = fal
 }
 
 export const configApi = {
-  get: () => request<SiteConfig>('/config'),
+  get: () => request<SiteConfig>('/config', { cache: 'no-store', headers: NO_CACHE_HEADERS }),
 }
 
 export const publicApi = {
-  getData: (auth = false) => request<PublicData>('/public/data', { auth }),
+  getData: (auth = false) =>
+    request<PublicData>('/public/data', { auth, cache: 'no-store', headers: NO_CACHE_HEADERS }),
 }
 
 export const adminApi = {
-  getData: () => request<AdminData>('/admin/data', { auth: true }),
+  getData: () => request<AdminData>('/admin/data', { auth: true, cache: 'no-store', headers: NO_CACHE_HEADERS }),
 }
 
 export const authApi = {

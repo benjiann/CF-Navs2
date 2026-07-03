@@ -27,6 +27,8 @@
   type AppView = 'home' | 'admin' | 'login'
 
   const THEME_STORAGE_KEY = 'cf-navs.theme-mode'
+  const REMOTE_DATA_REFRESH_THROTTLE_MS = 15_000
+  const VISIBLE_DATA_REFRESH_INTERVAL_MS = 60_000
 
   type CategoryFormValue = {
     id?: string | number
@@ -84,6 +86,9 @@
   let bookmarkSortSavePromise: Promise<void> = Promise.resolve()
   let categorySortRequestSeq = 0
   let bookmarkSortRequestSeq = 0
+  let lastRemoteDataRefreshAt = 0
+  let remoteDataRefreshPromise: Promise<void> | null = null
+  let visibleDataRefreshTimer: number | null = null
 
   $: config = $configStore.data
   $: publicData = $publicStore.data
@@ -349,6 +354,7 @@
     try {
       const data = await publicStore.refresh(false)
       applyConfigFromPublicData(data)
+      lastRemoteDataRefreshAt = Date.now()
       return data
     } catch (error) {
       if (isPublicModeForbidden(error)) {
@@ -364,6 +370,7 @@
               site_title: data.settings.site_title || forbiddenConfig.site_title,
               public_mode: false,
             })
+            lastRemoteDataRefreshAt = Date.now()
             return data
           } catch (authError) {
             if (isUnauthorizedError(authError)) {
@@ -616,16 +623,28 @@
   }
 
   async function refreshLoggedInData(forceRemote = false): Promise<void> {
+    let usedCachedFallback = false
+
     if (!forceRemote) {
       const cached = await readCachedAdminData()
       if (cached?.settings) {
         applyLoggedInData(cached)
-        return
+        usedCachedFallback = true
       }
     }
 
-    applyLoggedInData(await api.admin.getData())
-    await persistCurrentAdminData()
+    try {
+      applyLoggedInData(await api.admin.getData())
+      lastRemoteDataRefreshAt = Date.now()
+      await persistCurrentAdminData()
+    } catch (error) {
+      if (usedCachedFallback) {
+        lastRemoteDataRefreshAt = Date.now()
+        return
+      }
+
+      throw error
+    }
   }
 
   async function ensureLoggedInDataLoaded(): Promise<boolean> {
@@ -690,6 +709,79 @@
     }
     currentView = nextView
     booting = false
+  }
+
+  function hasPendingLocalDataChange(): boolean {
+    return (
+      savingCategory ||
+      savingBookmark ||
+      savingSettings ||
+      importing ||
+      deletingCategoryId !== null ||
+      deletingBookmarkId !== null
+    )
+  }
+
+  async function handleRemoteDataRefreshError(error: unknown): Promise<void> {
+    if (isUnauthorizedError(error)) {
+      authStore.setSession(null)
+      adminStore.reset()
+      await clearCachedAdminData()
+      await refreshPublicData()
+
+      const nextView: AppView = get(configStore).data?.public_mode === false ? 'login' : 'home'
+      if (nextView === 'login') {
+        await ensureLoginModalComponent()
+        loginModalOpen = true
+      }
+      currentView = nextView
+      return
+    }
+
+    rootError = getErrorMessage(error)
+  }
+
+  async function refreshCurrentDataFromRemote(force = false): Promise<void> {
+    if (booting || currentView === 'login' || hasPendingLocalDataChange()) return
+
+    const now = Date.now()
+    if (!force && now - lastRemoteDataRefreshAt < REMOTE_DATA_REFRESH_THROTTLE_MS) return
+    if (remoteDataRefreshPromise) return remoteDataRefreshPromise
+
+    remoteDataRefreshPromise = (async () => {
+      try {
+        rootError = ''
+        if (isLoggedIn()) {
+          await refreshLoggedInData(true)
+        } else {
+          await refreshPublicData()
+        }
+      } catch (error) {
+        await handleRemoteDataRefreshError(error)
+      } finally {
+        remoteDataRefreshPromise = null
+      }
+    })()
+
+    return remoteDataRefreshPromise
+  }
+
+  function requestRemoteDataRefresh(force = false): void {
+    void refreshCurrentDataFromRemote(force)
+  }
+
+  function handleWindowFocus(): void {
+    requestRemoteDataRefresh()
+  }
+
+  function handlePageShow(event: PageTransitionEvent): void {
+    requestRemoteDataRefresh(event.persisted)
+  }
+
+  function handleVisibilityChange(): void {
+    if (document.visibilityState === 'visible') {
+      requestRemoteDataRefresh()
+    }
   }
 
   function resetCategoryState(): void {
@@ -1162,12 +1254,28 @@
       mediaQuery.addEventListener('change', handleSystemThemeChange)
     }
 
+    window.addEventListener('focus', handleWindowFocus)
+    window.addEventListener('pageshow', handlePageShow)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    visibleDataRefreshTimer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        requestRemoteDataRefresh()
+      }
+    }, VISIBLE_DATA_REFRESH_INTERVAL_MS)
+
     void initializeApp()
   })
 
   onDestroy(() => {
     if (mediaQuery && handleSystemThemeChange) {
       mediaQuery.removeEventListener('change', handleSystemThemeChange)
+    }
+    window.removeEventListener('focus', handleWindowFocus)
+    window.removeEventListener('pageshow', handlePageShow)
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
+    if (visibleDataRefreshTimer !== null) {
+      window.clearInterval(visibleDataRefreshTimer)
+      visibleDataRefreshTimer = null
     }
   })
 </script>

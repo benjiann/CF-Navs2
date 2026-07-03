@@ -15,6 +15,7 @@ import {
   matchSiteConfigCache,
 } from '../lib/cache'
 import { getPublicDataSource, getSiteConfig } from '../lib/db'
+import { shouldBypassRequestCache } from '../lib/requestCache'
 import { fail } from '../lib/response'
 import { ok } from '../lib/response'
 import { extractBearerToken, validateSession } from '../middleware/auth'
@@ -85,28 +86,34 @@ function unauthorizedResponse() {
 export const publicRoutes = new Hono<HonoEnv>()
 
 publicRoutes.get('/config', async (c) => {
-  const cached = await matchSiteConfigCache(c.req.url)
-  if (cached) return cached
+  const bypassCache = shouldBypassRequestCache(c.req.header('Cache-Control'), c.req.header('Pragma'))
+  if (!bypassCache) {
+    const cached = await matchSiteConfigCache(c.req.url)
+    if (cached) return cached
+  }
 
   const data: SiteConfig = await getSiteConfig(c.env.DB)
   const response = c.json(ok(data), 200, {
-    'Cache-Control': 'public, max-age=15, s-maxage=60, stale-while-revalidate=300',
+    'Cache-Control': bypassCache ? 'no-store' : 'public, max-age=15, s-maxage=60, stale-while-revalidate=300',
   })
-  cacheSiteConfigResponse(c, c.req.url, response)
+  if (!bypassCache) {
+    cacheSiteConfigResponse(c, c.req.url, response)
+  }
   return response
 })
 
 publicRoutes.get('/public/data', async (c) => {
   const token = extractBearerToken(c.req.header('Authorization'))
+  const bypassCache = shouldBypassRequestCache(c.req.header('Cache-Control'), c.req.header('Pragma'))
   let privateAccessAllowed = false
-  if (!token) {
+  if (!token && !bypassCache) {
     const cached = await matchPublicDataCache(c.req.url)
     if (cached) return cached
   }
 
-  const cachedSiteConfig = await readCachedSiteConfig(c.req.url)
+  const cachedSiteConfig = bypassCache ? null : await readCachedSiteConfig(c.req.url)
   const siteConfig = cachedSiteConfig ?? await getSiteConfig(c.env.DB)
-  if (!cachedSiteConfig) {
+  if (!cachedSiteConfig && !bypassCache) {
     cacheSiteConfigData(c, c.req.url, siteConfig)
   }
   if (!siteConfig.public_mode) {
@@ -168,10 +175,12 @@ publicRoutes.get('/public/data', async (c) => {
   }
 
   const response = c.json(ok(data), 200, {
-    'Cache-Control': canUsePublicCache ? 'public, max-age=30, s-maxage=120, stale-while-revalidate=300' : 'no-store',
+    'Cache-Control': canUsePublicCache && !bypassCache
+      ? 'public, max-age=30, s-maxage=120, stale-while-revalidate=300'
+      : 'no-store',
   })
 
-  if (canUsePublicCache) {
+  if (canUsePublicCache && !bypassCache) {
     cachePublicDataResponse(c, c.req.url, response)
   }
 
