@@ -158,8 +158,17 @@
     --toc-surface-strong:
       linear-gradient(135deg, rgb(var(--card-bg-rgb, 255 255 255) / calc(var(--card-bg-opacity, 0.9) * 0.86)), rgba(255, 255, 255, 0.42)),
       rgb(var(--card-bg-rgb, 255 255 255) / calc(var(--card-bg-opacity, 0.9) * 0.7));
-    --toc-item-bg: rgb(var(--card-bg-rgb, 255 255 255) / calc(var(--card-bg-opacity, 0.9) * 0.28));
-    --toc-item-hover-bg: rgb(var(--card-bg-rgb, 255 255 255) / calc(var(--card-bg-opacity, 0.9) * 0.44));
+    --toc-item-bg:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(248, 250, 252, 0.58)),
+      rgb(var(--card-bg-rgb, 255 255 255) / calc(var(--card-bg-opacity, 0.9) * 0.46));
+    --toc-item-hover-bg:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(239, 246, 255, 0.68)),
+      rgb(var(--card-bg-rgb, 255 255 255) / calc(var(--card-bg-opacity, 0.9) * 0.62));
+    --toc-item-border: rgba(148, 163, 184, 0.26);
+    --toc-item-hover-border: color-mix(in srgb, var(--toc-accent) 34%, var(--toc-item-border));
+    --toc-item-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.62),
+      0 5px 14px rgba(15, 23, 42, 0.07);
     --toc-border: rgba(255, 255, 255, 0.42);
     --toc-text: var(--home-text-color, #0f172a);
     --toc-accent: var(--home-accent-color, #2563eb);
@@ -180,6 +189,9 @@
       rgb(var(--card-bg-rgb, 255 255 255) / calc(var(--card-bg-opacity, 0.15) * 0.78));
     --toc-item-bg: rgba(15, 23, 42, 0.18);
     --toc-item-hover-bg: rgba(30, 41, 59, 0.38);
+    --toc-item-border: rgba(255, 255, 255, 0.08);
+    --toc-item-hover-border: rgba(125, 211, 252, 0.22);
+    --toc-item-shadow: none;
     --toc-border: rgba(255, 255, 255, 0.1);
     --toc-text: var(--home-text-color, #e5eefb);
     --toc-accent: var(--home-accent-color, #7dd3fc);
@@ -327,7 +339,7 @@
   /* 导航项 */
   .toc-item {
     width: calc(100% - 20px);
-    border: none;
+    border: 1px solid transparent;
     border-radius: 0.9rem;
     background: transparent;
     display: flex;
@@ -336,16 +348,19 @@
     padding: 0 10px 0 0;
     margin: 0;
     color: var(--toc-text);
-    transition: background 0.18s ease, transform 0.18s ease;
+    transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
   }
 
   .toc-sidebar.expanded .toc-item {
     background: var(--toc-item-bg);
+    border-color: var(--toc-item-border);
+    box-shadow: var(--toc-item-shadow);
   }
 
   .toc-sidebar.expanded .toc-item:hover,
   .toc-sidebar.expanded .toc-item.active {
     background: var(--toc-item-hover-bg);
+    border-color: var(--toc-item-hover-border);
     transform: translateX(2px);
   }
 
