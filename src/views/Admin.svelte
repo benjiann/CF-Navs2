@@ -1011,7 +1011,7 @@
   .panel,
   .status-panel {
     border: 1px solid var(--admin-border);
-    border-radius: 24px;
+    border-radius: 18px;
     background: var(--admin-surface);
     box-shadow: var(--admin-shadow);
   }
@@ -1031,7 +1031,7 @@
   /* 左侧菜单 + 右侧内容布局 */
   .admin-layout {
     display: flex;
-    gap: 24px;
+    gap: 18px;
     align-items: flex-start;
     min-height: 0;
     overflow: hidden;
@@ -1039,15 +1039,15 @@
 
   .admin-sidebar {
     flex-shrink: 0;
-    width: 216px;
+    width: 198px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     position: sticky;
     top: 24px;
-    padding: 10px;
+    padding: 8px;
     border: 1px solid var(--admin-sidebar-border);
-    border-radius: 18px;
+    border-radius: 16px;
     background: var(--admin-sidebar-bg);
     box-shadow: var(--admin-sidebar-shadow);
     backdrop-filter: blur(18px) saturate(1.08);
@@ -1055,12 +1055,14 @@
   }
 
   .nav-item {
+    position: relative;
+    overflow: hidden;
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
+    gap: 10px;
+    padding: 10px 12px;
     border: 1px solid var(--admin-border);
-    border-radius: 12px;
+    border-radius: 10px;
     background: var(--admin-nav-bg);
     color: var(--admin-muted);
     font-size: 14px;
@@ -1082,9 +1084,28 @@
     color: var(--admin-accent-strong);
   }
 
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 9px;
+    bottom: 9px;
+    width: 3px;
+    border-radius: 999px;
+    background: var(--admin-accent);
+  }
+
   .nav-icon {
-    font-size: 18px;
+    width: 28px;
+    height: 28px;
     flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--admin-card-border);
+    border-radius: 8px;
+    background: var(--admin-icon-badge-bg);
+    font-size: 15px;
   }
 
   .nav-label {
@@ -1113,14 +1134,14 @@
     overflow: auto;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 16px;
     padding-right: 4px;
   }
 
   .list-view {
     display: grid;
     grid-template-rows: auto auto;
-    gap: 24px;
+    gap: 16px;
     min-height: 0;
     height: auto;
     align-content: start;
@@ -1166,8 +1187,8 @@
   .status-panel {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px;
-    padding: 22px 24px;
+    gap: 12px;
+    padding: 16px 18px;
   }
 
   .status-item {
@@ -1181,7 +1202,7 @@
   }
 
   .panel {
-    padding: 24px;
+    padding: 18px;
   }
 
   .list-panel {
@@ -1209,8 +1230,8 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 16px;
-    margin-bottom: 18px;
+    gap: 12px;
+    margin-bottom: 14px;
   }
 
   .list-panel-header {
@@ -1218,7 +1239,7 @@
     top: 0;
     z-index: 12;
     margin: 0;
-    padding: 20px 24px 14px;
+    padding: 16px 18px 12px;
     border-bottom: 1px solid var(--admin-divider);
     background: var(--admin-sticky-bg);
   }
@@ -1227,7 +1248,7 @@
     position: sticky;
     top: 0;
     z-index: 11;
-    padding: 12px 24px;
+    padding: 10px 18px;
     border-bottom: 1px solid var(--admin-divider);
     background: var(--admin-sticky-bg);
   }
@@ -1235,7 +1256,7 @@
   .panel-scroll-body {
     min-height: 0;
     overflow: auto;
-    padding: 14px 24px;
+    padding: 12px 18px;
   }
 
   .table-scroll-body {
@@ -1246,7 +1267,7 @@
   .panel-footer {
     border-top: 1px solid var(--admin-divider);
     background: var(--admin-sticky-bg);
-    padding: 12px 24px;
+    padding: 10px 18px;
   }
 
   .list-stack {

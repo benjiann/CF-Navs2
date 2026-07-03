@@ -1242,12 +1242,12 @@
     border-bottom: 1px solid var(--sp-header-border);
     background: var(--sp-header-bg);
     backdrop-filter: blur(16px);
-    padding: 22px 24px 18px;
+    padding: 16px 20px 14px;
   }
 
   .panel-eyebrow {
-    margin: 0 0 8px;
-    font-size: 12px;
+    margin: 0 0 5px;
+    font-size: 11px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--sp-muted);
@@ -1259,7 +1259,7 @@
   }
 
   h2 {
-    font-size: 24px;
+    font-size: 20px;
     line-height: 1.2;
     color: var(--sp-heading);
     text-wrap: balance;
@@ -1275,8 +1275,9 @@
   }
 
   .panel-desc {
-    margin-top: 8px;
+    margin-top: 5px;
     max-width: 64ch;
+    font-size: 13px;
     text-wrap: pretty;
   }
 
@@ -1325,24 +1326,36 @@
   .settings-form {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
-    gap: 16px;
-    padding: 20px 24px 24px;
+    gap: 12px;
+    padding: 16px 18px 20px;
   }
 
   .group {
+    position: relative;
     grid-column: span 6;
     align-content: start;
     border: 1px solid var(--sp-group-border);
-    border-radius: 16px;
-    padding: 18px;
+    border-radius: 14px;
+    padding: 16px 16px 16px 18px;
     display: grid;
-    gap: 16px;
+    gap: 14px;
     margin: 0;
     min-width: 0;
     background: var(--sp-group-bg);
     box-shadow:
       0 1px 2px rgba(15, 23, 42, 0.04),
       0 1px 0 rgba(255, 255, 255, 0.72) inset;
+  }
+
+  .group::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 18px;
+    bottom: 18px;
+    width: 3px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--sp-accent) 52%, transparent);
   }
 
   .group-wide {
@@ -1356,8 +1369,8 @@
   }
 
   .group legend {
-    padding: 0 6px;
-    margin-left: -6px;
+    padding: 0 7px;
+    margin-left: -4px;
     font-size: 13px;
     font-weight: 700;
     color: var(--sp-strong);
@@ -1373,27 +1386,40 @@
   .base-grid {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
-    gap: 14px 16px;
+    gap: 12px;
     align-items: start;
   }
 
   .settings-subsection {
     display: grid;
-    gap: 12px;
+    gap: 10px;
     min-width: 0;
   }
 
   .settings-subsection + .settings-subsection {
     border-top: 1px solid var(--sp-subsection-border);
-    padding-top: 16px;
+    padding-top: 14px;
   }
 
   .settings-subsection h3 {
+    position: relative;
     margin: 0;
+    padding-left: 10px;
     color: var(--sp-strong);
     font-size: 13px;
     font-weight: 700;
     line-height: 1.3;
+  }
+
+  .settings-subsection h3::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.18em;
+    bottom: 0.18em;
+    width: 3px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--sp-accent) 48%, transparent);
   }
 
   .field-title {
@@ -1401,7 +1427,7 @@
   }
 
   .field-url {
-    grid-column: span 4;
+    grid-column: span 5;
   }
 
   .field-color {
@@ -1423,15 +1449,15 @@
   }
 
   .card-size-grid .field-number {
-    grid-column: span 3;
-  }
-
-  .content-layout-grid .field-size {
     grid-column: span 4;
   }
 
+  .content-layout-grid .field-size {
+    grid-column: span 3;
+  }
+
   .content-layout-grid .field-range {
-    grid-column: span 2;
+    grid-column: span 3;
   }
 
   .card-appearance-grid .field-color {
@@ -1439,11 +1465,11 @@
   }
 
   .card-appearance-grid .field-range {
-    grid-column: span 3;
+    grid-column: span 4;
   }
 
   .search-controls-grid .field-select {
-    grid-column: span 3;
+    grid-column: span 4;
   }
 
   .search-controls-grid .toggle-field {
@@ -1452,11 +1478,11 @@
 
   .gradient-preset-panel {
     display: grid;
-    gap: 12px;
+    gap: 10px;
     min-width: 0;
     border: 1px solid var(--sp-gradient-panel-border);
     border-radius: 16px;
-    padding: 14px;
+    padding: 12px;
     background: var(--sp-gradient-panel-bg);
   }
 
@@ -1474,7 +1500,7 @@
   }
 
   .gradient-preset-header p {
-    margin-top: 6px;
+    margin-top: 4px;
     color: var(--sp-muted);
     font-size: 13px;
     line-height: 1.5;
@@ -1638,11 +1664,11 @@
 
   .theme-background-card {
     display: grid;
-    gap: 12px;
+    gap: 10px;
     min-width: 0;
     border: 1px solid var(--sp-theme-card-border);
     border-radius: 14px;
-    padding: 14px;
+    padding: 12px;
     background: var(--sp-theme-card-bg);
   }
 
@@ -1669,7 +1695,7 @@
 
   .background-form {
     display: grid;
-    gap: 12px;
+    gap: 10px;
     min-width: 0;
   }
 
@@ -1682,7 +1708,7 @@
 
   .background-range-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 10px;
     align-items: start;
   }
@@ -1722,7 +1748,7 @@
   .toggle-field,
   .engine-cell {
     display: grid;
-    gap: 8px;
+    gap: 6px;
   }
 
   .field.full-width {
@@ -1750,7 +1776,7 @@
     box-sizing: border-box;
     border: 1px solid var(--sp-input-border);
     border-radius: 10px;
-    padding: 10px 12px;
+    padding: 9px 11px;
     font-size: 14px;
     color: var(--sp-input-text);
     background: var(--sp-input-bg);
@@ -1799,7 +1825,7 @@
   .toggle-field {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
     border: 1px solid var(--sp-toggle-border);
     background: var(--sp-toggle-bg);
     transition:
@@ -1815,7 +1841,7 @@
 
   .toggle-copy {
     display: grid;
-    gap: 6px;
+    gap: 4px;
   }
 
   .toggle-field input[type='checkbox'] {
@@ -1832,12 +1858,12 @@
 
   .engine-row {
     display: grid;
-    grid-template-columns: minmax(140px, 0.75fr) minmax(160px, 0.9fr) minmax(240px, 1.5fr) auto;
-    gap: 12px;
+    grid-template-columns: minmax(130px, 0.7fr) minmax(150px, 0.8fr) minmax(240px, 1.6fr) auto;
+    gap: 10px;
     align-items: end;
     border: 1px solid var(--sp-toggle-border);
     border-radius: 12px;
-    padding: 12px;
+    padding: 10px;
     background: var(--sp-toggle-bg);
   }
 
@@ -1857,8 +1883,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    margin-top: 2px;
+    gap: 12px;
+    margin-top: 0;
     border: 1px solid var(--sp-footer-border);
     border-radius: 16px;
     background: var(--sp-footer-bg);
@@ -1866,7 +1892,7 @@
     box-shadow:
       0 18px 38px rgba(15, 23, 42, 0.16),
       0 1px 0 rgba(255, 255, 255, 0.76) inset;
-    padding: 12px 12px 12px 16px;
+    padding: 10px 12px;
   }
 
   .helper-text {
