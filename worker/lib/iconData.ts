@@ -10,9 +10,91 @@ const MAX_ICON_SIZE = 256_000
 const ICON_ACCEPT = 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.1'
 const BASE64_CHUNK_SIZE = 0x8000
 
-function normalizeContentType(value: string | null): string {
-  const contentType = value?.split(';')[0]?.trim() || 'image/png'
-  return contentType.startsWith('image/') ? contentType : 'image/png'
+function decodeTextPrefix(bytes: Uint8Array, limit = 2048): string {
+  try {
+    return new TextDecoder('utf-8', { fatal: false }).decode(bytes.subarray(0, limit))
+  } catch {
+    return ''
+  }
+}
+
+function looksLikeSvg(bytes: Uint8Array): boolean {
+  const head = decodeTextPrefix(bytes).replace(/^﻿/, '').trim().toLowerCase()
+  if (!head || head.startsWith('<!doctype html') || head.startsWith('<html')) {
+    return false
+  }
+  // A real SVG starts with the <svg> root, optionally preceded by an XML
+  // declaration / doctype / comments.
+  return head.startsWith('<svg') || (head.startsWith('<?xml') && /<svg[\s>]/.test(head))
+}
+
+// Detect the real image type from the byte signature instead of trusting the
+// declared Content-Type. Returns null when the payload is not a genuine image
+// (e.g. an HTML login/redirect page from an auth-gated host), so the caller can
+// refuse to cache garbage as a fake image.
+function sniffImageContentType(bytes: Uint8Array, declaredType: string | null): string | null {
+  const b = bytes
+  const len = b.length
+
+  // PNG
+  if (
+    len >= 8 &&
+    b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 &&
+    b[4] === 0x0d && b[5] === 0x0a && b[6] === 0x1a && b[7] === 0x0a
+  ) {
+    return 'image/png'
+  }
+  // JPEG
+  if (len >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) {
+    return 'image/jpeg'
+  }
+  // GIF87a / GIF89a
+  if (
+    len >= 6 &&
+    b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38 &&
+    (b[4] === 0x37 || b[4] === 0x39) && b[5] === 0x61
+  ) {
+    return 'image/gif'
+  }
+  // BMP
+  if (len >= 2 && b[0] === 0x42 && b[1] === 0x4d) {
+    return 'image/bmp'
+  }
+  // ICO (00 00 01 00) / CUR (00 00 02 00)
+  if (len >= 4 && b[0] === 0x00 && b[1] === 0x00 && (b[2] === 0x01 || b[2] === 0x02) && b[3] === 0x00) {
+    return 'image/x-icon'
+  }
+  // RIFF....WEBP
+  if (
+    len >= 12 &&
+    b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+    b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50
+  ) {
+    return 'image/webp'
+  }
+  // ISO-BMFF ('ftyp' at bytes 4..7) → AVIF / HEIF
+  if (len >= 12 && b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) {
+    const brand = String.fromCharCode(b[8], b[9], b[10], b[11]).toLowerCase()
+    if (brand.startsWith('avi')) return 'image/avif'
+    if (brand.startsWith('hei') || brand.startsWith('mif') || brand.startsWith('msf')) return 'image/heif'
+  }
+  // SVG (text based)
+  if (looksLikeSvg(b)) {
+    return 'image/svg+xml'
+  }
+
+  // Fallback: trust a concrete image/* declared type only when the bytes are
+  // not obviously HTML text. Covers exotic-but-valid formats without a known
+  // signature, while still rejecting auth walls / error pages.
+  const declared = declaredType?.split(';')[0]?.trim().toLowerCase() || ''
+  if (declared.startsWith('image/') && declared !== 'image/svg+xml') {
+    const head = decodeTextPrefix(b, 512).replace(/^﻿/, '').trim().toLowerCase()
+    const looksLikeHtml =
+      head.startsWith('<!doctype html') || head.startsWith('<html') || head.startsWith('<head')
+    if (!looksLikeHtml) return declared
+  }
+
+  return null
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
@@ -42,14 +124,20 @@ export async function fetchCacheableIcon(iconUrl: string, timeoutMs = CACHE_TIME
 
     if (!response.ok) return null
 
-    const contentType = normalizeContentType(response.headers.get('content-type'))
     const buffer = await response.arrayBuffer()
     if (buffer.byteLength === 0 || buffer.byteLength > MAX_ICON_SIZE) {
       return null
     }
 
+    const bytes = new Uint8Array(buffer)
+    const contentType = sniffImageContentType(bytes, response.headers.get('content-type'))
+    // Reject payloads that are not real images (e.g. an auth-gated host that
+    // returns an HTML login page instead of the icon). Caching those would
+    // store an undecodable blob that renders as the title's first letter.
+    if (!contentType) return null
+
     return {
-      bytes: new Uint8Array(buffer),
+      bytes,
       contentType,
     }
   } catch {

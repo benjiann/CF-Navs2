@@ -255,20 +255,24 @@
     justify-content: center;
     padding: 10px;
     overflow: hidden;
-    border: 1px solid var(--toc-border);
+    border: 1px solid transparent;
     border-left: none;
     border-top-right-radius: 20px;
     border-bottom-right-radius: 20px;
-    background: var(--toc-surface);
-    box-shadow: var(--toc-shadow);
-    backdrop-filter: blur(14px) saturate(1.18);
-    -webkit-backdrop-filter: blur(14px) saturate(1.18);
-    transition: width 0.3s ease, background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    transition: width 0.3s ease, background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, backdrop-filter 0.3s ease;
   }
 
   .toc-sidebar.expanded {
     width: 200px;
     background: var(--toc-surface);
+    border-color: var(--toc-border);
+    box-shadow: var(--toc-shadow);
+    backdrop-filter: blur(14px) saturate(1.18);
+    -webkit-backdrop-filter: blur(14px) saturate(1.18);
   }
 
   .toc-sidebar.mobile-hidden {
