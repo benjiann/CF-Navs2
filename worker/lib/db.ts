@@ -37,9 +37,9 @@ const DEFAULT_SETTINGS: Settings = {
       { name: 'Bing', icon: '', url_template: 'https://www.bing.com/search?q={q}' },
     ],
   },
-  card_size: { width: 200, height: 0 }, // Sun-Panel 标准值
+  card_size: { width: 80, height: 60 },
   card_style: 'info',
-  card_icon_size: 70,
+  card_icon_size: 60,
   card_show_description: true,
   card_background_color: '#ffffff',
   card_background_opacity: 0.9,

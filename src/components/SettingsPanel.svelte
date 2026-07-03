@@ -81,9 +81,9 @@
       dark: { ...defaultDarkBackground },
     },
     search_engine: { current: defaultSearchEngine.current, engines: defaultSearchEngine.engines.map((e) => ({ ...e })) },
-    card_size: { width: 200, height: 0 }, // Sun-Panel 标准值
+    card_size: { width: 80, height: 60 },
     card_style: 'info',
-    card_icon_size: 70,
+    card_icon_size: 60,
     card_show_description: true,
     card_background_color: '#ffffff',
     card_background_opacity: 0.9,
@@ -221,11 +221,11 @@
             : defaultSearchEngine.engines.map((engine) => ({ ...engine })),
       },
       card_size: {
-        width: typeof cardSize?.width === 'number' ? cardSize.width : 200,
-        height: typeof cardSize?.height === 'number' ? cardSize.height : 0,
+        width: typeof cardSize?.width === 'number' ? cardSize.width : 80,
+        height: typeof cardSize?.height === 'number' ? cardSize.height : 60,
       },
       card_style: source?.card_style ?? 'info',
-      card_icon_size: typeof source?.card_icon_size === 'number' ? source.card_icon_size : 70,
+      card_icon_size: typeof source?.card_icon_size === 'number' ? source.card_icon_size : 60,
       card_show_description: source?.card_show_description ?? true,
       card_background_color: source?.card_background_color ?? '#ffffff',
       card_background_opacity: typeof source?.card_background_opacity === 'number' ? source.card_background_opacity : 0.9,
@@ -867,17 +867,17 @@
             <label class="field field-number">
               <span>最小宽度 (px)</span>
               <input bind:value={form.card_size.width} type="number" min="80" max="400" step="10" />
-              <small>建议 180-280。</small>
+              <small>推荐 80。</small>
             </label>
             <label class="field field-number">
               <span>最小高度 (px)</span>
               <input bind:value={form.card_size.height} type="number" min="0" max="300" step="10" />
-              <small>0 表示自动高度。</small>
+              <small>推荐 60。</small>
             </label>
             <label class="field field-number">
               <span>图标大小 (px)</span>
               <input bind:value={form.card_icon_size} type="number" min="40" max="100" step="5" />
-              <small>推荐 70。</small>
+              <small>推荐 60。</small>
             </label>
           </div>
         </div>
@@ -1695,28 +1695,34 @@
 
   .background-form {
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 10px;
     min-width: 0;
   }
 
   .background-main-row {
-    display: grid;
-    grid-template-columns: minmax(112px, 0.34fr) minmax(0, 1fr);
-    gap: 12px;
-    align-items: start;
+    display: contents;
   }
 
   .background-range-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 10px;
-    align-items: start;
+    display: contents;
   }
 
   .background-type-field,
   .background-value-field {
     min-width: 0;
     align-content: start;
+  }
+
+  .background-type-field,
+  .background-range-grid > .field {
+    order: 1;
+  }
+
+  .background-value-field {
+    grid-column: 1 / -1;
+    order: 2;
+    padding-top: 2px;
   }
 
   .background-type-field select {
@@ -2080,8 +2086,7 @@
       grid-template-columns: 1fr;
     }
 
-    .background-main-row,
-    .background-range-grid {
+    .background-form {
       grid-template-columns: 1fr;
     }
 

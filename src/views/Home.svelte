@@ -358,10 +358,10 @@
                 category={category}
                 bookmarks={categoryBookmarks.get(category.id) ?? []}
                 canAddBookmark={isAuthenticated}
-                cardWidth={settings?.card_size?.width ?? 200}
-                cardHeight={settings?.card_size?.height ?? 0}
+                cardWidth={settings?.card_size?.width ?? 80}
+                cardHeight={settings?.card_size?.height ?? 60}
                 cardStyle={settings?.card_style ?? 'info'}
-                cardIconSize={settings?.card_icon_size ?? 70}
+                cardIconSize={settings?.card_icon_size ?? 60}
                 cardShowDescription={settings?.card_show_description ?? true}
                 cardIconShowTitle={settings?.card_icon_show_title ?? true}
                 canSort={isAuthenticated && !hasSearchQuery}
