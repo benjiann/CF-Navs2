@@ -269,7 +269,7 @@
 
     let layer = background.value
     if (background.type === 'image' && background.value) {
-      layer = `url("${background.value}") center / cover no-repeat fixed`
+      layer = `url("${background.value}") center / cover no-repeat`
     }
 
     // 卡片背景色转 RGB（用于 CSS rgb() 函数）

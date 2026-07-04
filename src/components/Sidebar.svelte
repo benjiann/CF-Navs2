@@ -167,16 +167,16 @@
     --toc-item-border: rgba(148, 163, 184, 0.26);
     --toc-item-hover-border: color-mix(in srgb, var(--toc-accent) 34%, var(--toc-item-border));
     --toc-item-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.62),
-      0 5px 14px rgba(15, 23, 42, 0.07);
+      inset 0 1px 0 rgba(255, 255, 255, 0.46),
+      0 1px 4px rgba(15, 23, 42, 0.06);
     --toc-border: rgba(255, 255, 255, 0.42);
     --toc-text: var(--home-text-color, #0f172a);
     --toc-accent: var(--home-accent-color, #2563eb);
     --toc-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.52),
-      0 10px 26px rgba(15, 23, 42, 0.11);
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      0 4px 14px rgba(15, 23, 42, 0.08);
     --toc-slip: rgba(15, 23, 42, 0.72);
-    --toc-slip-shadow: 0 5px 14px rgba(15, 23, 42, 0.18);
+    --toc-slip-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
   }
 
   :global([data-theme='dark']) .toc-mobile-btn,
@@ -197,9 +197,9 @@
     --toc-accent: var(--home-accent-color, #7dd3fc);
     --toc-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.08),
-      0 14px 32px rgba(0, 0, 0, 0.24);
+      0 6px 18px rgba(0, 0, 0, 0.2);
     --toc-slip: rgba(226, 232, 240, 0.82);
-    --toc-slip-shadow: 0 5px 16px rgba(0, 0, 0, 0.24);
+    --toc-slip-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   }
 
   .toc-mobile-btn {
@@ -212,8 +212,6 @@
     border: 1px solid var(--toc-border);
     border-radius: 0.9rem;
     background: var(--toc-surface);
-    backdrop-filter: blur(14px) saturate(1.18);
-    -webkit-backdrop-filter: blur(14px) saturate(1.18);
     color: var(--toc-text);
     display: flex;
     align-items: center;
@@ -243,14 +241,12 @@
     position: fixed;
     border: 0;
     padding: 0;
-    cursor: pointer;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 30;
     background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(2px);
     cursor: pointer;
   }
 
@@ -275,7 +271,7 @@
     box-shadow: none;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    transition: width 0.3s ease, background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, backdrop-filter 0.3s ease;
+    transition: width 0.24s ease, background 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
   }
 
   .toc-sidebar.expanded {
@@ -283,8 +279,6 @@
     background: var(--toc-surface);
     border-color: var(--toc-border);
     box-shadow: var(--toc-shadow);
-    backdrop-filter: blur(14px) saturate(1.18);
-    -webkit-backdrop-filter: blur(14px) saturate(1.18);
   }
 
   .toc-sidebar.mobile-hidden {
@@ -301,8 +295,6 @@
     border: 1px solid var(--toc-border);
     border-radius: 0.8rem;
     background: var(--toc-item-bg);
-    backdrop-filter: blur(10px) saturate(1.12);
-    -webkit-backdrop-filter: blur(10px) saturate(1.12);
     color: var(--toc-text);
     font-size: 24px;
     line-height: 1;
@@ -366,13 +358,15 @@
 
   /* 条纹指示器 */
   .toc-slip {
-    width: 20px;
+    width: 40px;
     height: 6px;
     background-color: var(--toc-slip);
     border-radius: 4px;
     margin: 13px 0;
     flex-shrink: 0;
-    transition: width 0.3s ease, height 0.3s ease, box-shadow 0.3s ease, background 0.18s ease;
+    transform: scaleX(0.5);
+    transform-origin: left center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.18s ease;
     box-shadow: var(--toc-slip-shadow);
   }
 
@@ -381,7 +375,7 @@
   }
 
   .toc-item:hover .toc-slip {
-    width: 40px;
+    transform: scaleX(1);
   }
 
   .toc-item.active .toc-slip {
@@ -395,7 +389,9 @@
     font-size: 14px;
     color: var(--toc-text);
     margin-left: 0;
-    transition: opacity 0.3s ease, margin-left 0.3s ease, font-size 0.3s ease;
+    display: inline-block;
+    transform: translateX(0);
+    transition: opacity 0.2s ease, margin-left 0.2s ease, transform 0.18s ease;
   }
 
   .toc-sidebar.expanded .toc-title {
@@ -404,7 +400,7 @@
   }
 
   .toc-item:hover .toc-title {
-    font-size: 16px;
+    transform: translateX(1px);
   }
 
   .toc-item.active .toc-title {

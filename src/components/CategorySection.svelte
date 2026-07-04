@@ -240,18 +240,14 @@
       rgb(var(--card-bg-rgb, 255 255 255) / calc(var(--card-bg-opacity, 0.9) * 0.62));
     color: var(--card-text-color, currentColor);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.52),
-      0 8px 18px rgba(15, 23, 42, 0.1);
-    backdrop-filter: blur(12px) saturate(1.12);
-    -webkit-backdrop-filter: blur(12px) saturate(1.12);
+      inset 0 1px 0 rgba(255, 255, 255, 0.42),
+      0 2px 8px rgba(15, 23, 42, 0.07);
     font-size: 0.86rem;
     font-weight: 600;
     cursor: pointer;
     transition:
-      transform 0.18s ease,
-      border-color 0.18s ease,
-      background 0.18s ease,
-      box-shadow 0.18s ease;
+      transform 0.16s ease,
+      border-color 0.16s ease;
   }
 
   .add-link-button.ghost {
@@ -264,8 +260,8 @@
   .add-link-button:hover:not(:disabled) {
     border-color: rgba(255, 255, 255, 0.62);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.64),
-      0 12px 24px rgba(15, 23, 42, 0.14);
+      inset 0 1px 0 rgba(255, 255, 255, 0.54),
+      0 5px 14px rgba(15, 23, 42, 0.09);
     transform: translateY(-1px);
   }
 
@@ -362,7 +358,7 @@
     color: var(--card-text-color, currentColor);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.08),
-      0 8px 18px rgba(0, 0, 0, 0.2);
+      0 3px 10px rgba(0, 0, 0, 0.16);
   }
 
   :global([data-theme='dark']) .add-link-button.ghost {
@@ -374,8 +370,8 @@
   :global([data-theme='dark']) .add-link-button:hover:not(:disabled) {
     border-color: rgba(203, 213, 225, 0.38);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.12),
-      0 12px 24px rgba(0, 0, 0, 0.28);
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 6px 16px rgba(0, 0, 0, 0.2);
   }
 
   :global([data-theme='dark']) .section-title-wrap p {

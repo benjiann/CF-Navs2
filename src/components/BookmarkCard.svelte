@@ -449,15 +449,11 @@
       linear-gradient(135deg, rgb(var(--card-bg-rgb, 255 255 255) / calc(var(--card-bg-opacity, 0.9) * 0.78)), rgba(255, 255, 255, 0.34)),
       rgb(var(--card-bg-rgb, 255 255 255) / calc(var(--card-bg-opacity, 0.9) * 0.62));
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.52),
-      0 10px 26px rgba(15, 23, 42, 0.11);
-    backdrop-filter: blur(14px) saturate(1.18);
-    -webkit-backdrop-filter: blur(14px) saturate(1.18);
+      inset 0 1px 0 rgba(255, 255, 255, 0.46),
+      0 2px 8px rgba(15, 23, 42, 0.08);
     transition:
-      transform 0.18s ease,
-      box-shadow 0.18s ease,
-      border-color 0.18s ease,
-      background 0.18s ease;
+      transform 0.16s ease,
+      border-color 0.16s ease;
   }
 
   /* 详情风格 */
@@ -475,9 +471,9 @@
   .bookmark-card-info:hover {
     border-color: rgba(255, 255, 255, 0.62);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.64),
-      0 16px 34px rgba(15, 23, 42, 0.16);
-    transform: translateY(-2px);
+      inset 0 1px 0 rgba(255, 255, 255, 0.58),
+      0 6px 16px rgba(15, 23, 42, 0.1);
+    transform: translateY(-1px);
   }
 
   .bookmark-card-info .bookmark-text {
@@ -532,9 +528,9 @@
   .bookmark-card-icon:hover {
     border-color: rgba(255, 255, 255, 0.62);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.64),
-      0 16px 34px rgba(15, 23, 42, 0.16);
-    transform: translateY(-2px);
+      inset 0 1px 0 rgba(255, 255, 255, 0.58),
+      0 6px 16px rgba(15, 23, 42, 0.1);
+    transform: translateY(-1px);
   }
 
   .bookmark-card-icon .bookmark-icon {
@@ -603,8 +599,8 @@
       linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(248, 250, 252, 0.62)),
       rgba(255, 255, 255, 0.52);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.62),
-      0 6px 14px rgba(15, 23, 42, 0.08);
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      0 1px 4px rgba(15, 23, 42, 0.06);
   }
 
   .bookmark-icon.has-custom-background {
@@ -645,15 +641,15 @@
     color: var(--card-text-color, #e2e8f0);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.08),
-      0 14px 32px rgba(0, 0, 0, 0.24);
+      0 4px 12px rgba(0, 0, 0, 0.18);
   }
 
   :global([data-theme='dark']) .bookmark-card-info:hover,
   :global([data-theme='dark']) .bookmark-card-icon:hover {
     border-color: rgba(255, 255, 255, 0.16);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.12),
-      0 18px 38px rgba(0, 0, 0, 0.32);
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 8px 18px rgba(0, 0, 0, 0.24);
   }
 
   :global([data-theme='dark']) .bookmark-card-info .bookmark-description {
@@ -672,7 +668,7 @@
       rgba(255, 255, 255, 0.08);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.08),
-      0 6px 16px rgba(0, 0, 0, 0.18);
+      0 2px 8px rgba(0, 0, 0, 0.14);
   }
 
   :global([data-theme='dark']) .bookmark-icon .icon-text {
