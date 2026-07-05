@@ -496,6 +496,7 @@
   .bookmark-card-shell {
     position: relative;
     min-width: 0;
+    contain: layout style;
   }
 
   .bookmark-card-shell.is-info {

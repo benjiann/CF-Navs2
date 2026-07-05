@@ -89,3 +89,17 @@ Fix:
 
 - Bookmark icon images now declare explicit `width` and `height` attributes and use `fetchpriority="low"` alongside existing lazy loading and async decoding.
 - Retest showed all 337 icon images had the low-priority hint and fixed dimensions, zero broken images, no failed requests, and Cache Storage remained under 1 MB.
+
+## 2026-07-05 Round 5
+
+Stress path: authenticated home reload, full-page scroll sweep, and repeated layout updates while all 337 bookmark cards are present.
+
+Observed:
+
+- The full home list keeps about 2,700 DOM nodes active after rendering 337 bookmarks.
+- Card hover, icon state changes, and scroll-triggered image updates can force layout/style work across a large sibling list.
+
+Fix:
+
+- Bookmark card shells now use CSS `contain: layout style` to isolate per-card layout and style recalculation.
+- Retest showed all 337 card shells had containment applied, zero broken images, zero failed requests, `/api/admin/data` stayed about 38 KB transferred, and icon request counts did not increase.
