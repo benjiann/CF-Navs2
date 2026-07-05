@@ -2,6 +2,8 @@
 
 This project includes a real-browser audit script for the production site or any deployed CF-Navs origin.
 
+Read `docs/PERFORMANCE_CONTRACT.md` before changing data freshness, icon loading, Service Worker caching, or admin loading behavior.
+
 ## Chrome Setup
 
 Start Chrome with a DevTools endpoint, or reuse an existing Chrome that already exposes one.
