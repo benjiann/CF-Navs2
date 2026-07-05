@@ -15,18 +15,14 @@
   import type { BookmarkFormValue } from '../lib/adminTypes'
   import {
     buildBookmarkSubmitPayload,
-    canPreviewIcon,
-    canPreviewIconAsImage,
     createBookmarkFormValue,
     emptyBookmarkForm,
     findLogoSchemeName,
-    getCandidatePreviewUrl,
-    getFormIconPreviewUrl,
     getIconifySearchQuery,
     getLogoSchemeByName,
-    getTextIconPreview,
-    isCandidateSelected,
   } from '../lib/bookmarkFormIcons'
+  import BookmarkCustomIconField from './BookmarkCustomIconField.svelte'
+  import BookmarkIconCandidatePicker from './BookmarkIconCandidatePicker.svelte'
   import ColorAlphaInput from './ColorAlphaInput.svelte'
   import IconifySelector from './IconifySelector.svelte'
   import LogoSchemeSelector from './LogoSchemeSelector.svelte'
@@ -250,7 +246,8 @@
     faviconError = ''
   }
 
-  function markCustomIconInput() {
+  function markCustomIconInput(nextIcon: string) {
+    form.icon = nextIcon
     form.icon_source = ''
     iconifyName = ''
     iconifyUseConfirmed = false
@@ -329,35 +326,12 @@
           </select>
         </label>
 
-        <!-- 图标候选区 -->
-        <div class="icon-picker-section field-compact">
-          <span class="field-label">选择图标</span>
-
-          {#if candidates.length > 0}
-            <div class="icon-candidates">
-              {#each candidates as candidate}
-                <button
-                  type="button"
-                  class="candidate-card"
-                  class:selected={isCandidateSelected(candidate, form)}
-                  on:click={() => selectCandidate(candidate)}
-                  title={candidate.label}
-                >
-                  <img
-                    src={getCandidatePreviewUrl(candidate)}
-                    alt={candidate.label}
-                    loading="lazy"
-                  />
-                  <span class="candidate-label">{candidate.label}</span>
-                </button>
-              {/each}
-            </div>
-          {:else if form.url.trim()}
-            <p class="hint-text">请输入有效链接以生成图标候选</p>
-          {:else}
-            <p class="hint-text">填写链接地址后将自动生成图标选项</p>
-          {/if}
-        </div>
+        <BookmarkIconCandidatePicker
+          {candidates}
+          {form}
+          urlFilled={Boolean(form.url.trim())}
+          onSelect={selectCandidate}
+        />
 
         <div class="field-block field-compact">
           <span>图标背景色</span>
@@ -399,40 +373,15 @@
           />
         {/if}
 
-        <label class="field-wide">
-          <span>自定义图标 / 手动输入</span>
-          <div class="icon-row">
-            <input
-              bind:value={form.icon}
-              type="text"
-              placeholder="图标 URL / 表情，如 ⭐"
-              on:input={markCustomIconInput}
-            />
-            {#if form.icon && canPreviewIcon(form.icon)}
-              <span class="icon-preview" title="图标预览">
-                {#if canPreviewIconAsImage(form.icon)}
-                  <img src={getFormIconPreviewUrl(form, iconifyName)} alt="图标预览" />
-                {:else}
-                  <span class="icon-preview-text">{getTextIconPreview(form.icon)}</span>
-                {/if}
-              </span>
-            {/if}
-            {#if imageHostUrl}
-              <button
-                type="button"
-                class="ghost-button upload-button"
-                on:click={openImageHost}
-                disabled={loading}
-                title="打开图床上传图标"
-              >
-                打开图床 ↗
-              </button>
-            {/if}
-          </div>
-          {#if faviconError}
-            <small class="field-error">{faviconError}</small>
-          {/if}
-        </label>
+        <BookmarkCustomIconField
+          {form}
+          {iconifyName}
+          {imageHostUrl}
+          {loading}
+          {faviconError}
+          onIconInput={markCustomIconInput}
+          onOpenImageHost={openImageHost}
+        />
 
 
         <label class="field-wide description-field">
@@ -590,136 +539,11 @@
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
   }
 
-  .field-label {
-    color: #334155;
-    font-size: 13px;
-    font-weight: 600;
-  }
-
-  .hint-text {
-    margin: 0;
-    color: #94a3b8;
-    font-size: 12px;
-    line-height: 1.35;
-    padding: 2px 0;
-  }
-
   .error-text {
     grid-column: 1 / -1;
     margin: 0;
     color: #dc2626;
     font-size: 13px;
-  }
-
-  .icon-picker-section {
-    display: grid;
-    min-width: 0;
-    gap: 5px;
-  }
-
-  .icon-candidates {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 5px;
-  }
-
-  .candidate-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
-    min-height: 46px;
-    padding: 4px;
-    border: 2px solid #e2e8f0;
-    border-radius: 9px;
-    background: #ffffff;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .candidate-card:hover {
-    border-color: #93c5fd;
-    background: #f0f5ff;
-  }
-
-  .candidate-card.selected {
-    border-color: #2563eb;
-    background: #eff6ff;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-  }
-
-  .candidate-card img {
-    width: 22px;
-    height: 22px;
-    object-fit: contain;
-    border-radius: 6px;
-  }
-
-  .candidate-label {
-    font-size: 10px;
-    color: #475569;
-    text-align: center;
-    line-height: 1.2;
-    overflow-wrap: anywhere;
-  }
-
-  .candidate-card.selected .candidate-label {
-    color: #1e40af;
-    font-weight: 600;
-  }
-
-  .icon-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) max-content max-content;
-    gap: 6px;
-    align-items: center;
-  }
-
-  .icon-row input {
-    min-width: 0;
-  }
-
-  .upload-button {
-    flex: 0 0 auto;
-    white-space: nowrap;
-  }
-
-  .icon-preview {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border: 1px solid #e2e8f0;
-    border-radius: 9px;
-    background: #f8fafc;
-    box-sizing: border-box;
-  }
-
-  .icon-preview img {
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-    object-fit: cover;
-  }
-
-  .icon-preview-text {
-    max-width: 100%;
-    color: #475569;
-    font-size: 14px;
-    font-weight: 700;
-    line-height: 1;
-    overflow: hidden;
-    text-align: center;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .field-error {
-    margin: 0;
-    color: #dc2626;
-    font-size: 12px;
-    line-height: 1.35;
   }
 
   .modal-actions {
@@ -813,19 +637,6 @@
 
     .field-compact,
     .field-wide {
-      grid-column: 1 / -1;
-    }
-
-    .icon-candidates {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
-    .icon-row {
-      align-items: stretch;
-      grid-template-columns: minmax(0, 1fr) 32px;
-    }
-
-    .icon-row .upload-button {
       grid-column: 1 / -1;
     }
 
