@@ -1,0 +1,538 @@
+.admin-list-view {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 16px;
+  min-height: 0;
+  height: auto;
+  align-content: start;
+}
+
+.admin-list-panel {
+  display: grid;
+  min-height: 0;
+  height: auto;
+  align-self: start;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--admin-border);
+  border-radius: 18px;
+  background: var(--admin-surface);
+  box-shadow: var(--admin-shadow);
+}
+
+.admin-category-list-panel {
+  grid-template-rows: auto minmax(0, auto) auto;
+}
+
+.admin-bookmark-list-panel {
+  grid-template-rows: auto auto minmax(0, auto) auto;
+  min-width: 0;
+}
+
+.admin-status-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--admin-border);
+  border-radius: 18px;
+  background: var(--admin-surface);
+  box-shadow: var(--admin-shadow);
+}
+
+.admin-status-item {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-status-label {
+  color: var(--admin-subtle);
+  font-size: 13px;
+}
+
+.admin-list-panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--admin-divider);
+  background: var(--admin-sticky-bg);
+}
+
+.admin-panel-eyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--admin-subtle);
+}
+
+.admin-list-panel h2,
+.admin-list-panel h3,
+.admin-list-panel p,
+.admin-status-panel p {
+  margin: 0;
+}
+
+.admin-list-panel h2 {
+  font-size: 22px;
+}
+
+.admin-list-panel h3 {
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+
+.admin-header-actions-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.admin-list-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 11;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--admin-divider);
+  background: var(--admin-sticky-bg);
+}
+
+.admin-panel-scroll-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 18px;
+}
+
+.admin-table-scroll-body {
+  padding: 0;
+  overflow: auto;
+}
+
+.admin-panel-footer {
+  border-top: 1px solid var(--admin-divider);
+  background: var(--admin-sticky-bg);
+  padding: 10px 18px;
+}
+
+.admin-list-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-compact-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--admin-card-border);
+  border-radius: 12px;
+  background: var(--admin-card-bg);
+  transition: border-color 0.15s ease;
+}
+
+.admin-compact-card:hover {
+  border-color: var(--admin-card-hover-border);
+}
+
+.admin-compact-card.sortable {
+  cursor: grab;
+  user-select: none;
+  border-color: var(--admin-sort-highlight-border);
+  background: var(--admin-sort-highlight-bg);
+}
+
+.admin-compact-card.sortable:active {
+  cursor: grabbing;
+}
+
+.admin-list-stack.is-sorting .admin-compact-card {
+  transition: none;
+}
+
+.admin-compact-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-compact-info h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--admin-text);
+}
+
+.admin-count-badge {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--admin-badge-bg);
+  color: var(--admin-badge-text);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.admin-icon-badge {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--admin-icon-badge-bg);
+  font-size: 14px;
+}
+
+.admin-icon-badge.small {
+  width: 34px;
+  height: 34px;
+  font-size: 16px;
+}
+
+.admin-drag-handle {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  border: 1px solid var(--admin-card-border);
+  border-radius: 8px;
+  background: var(--admin-card-bg);
+  color: var(--admin-subtle);
+  cursor: grab;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 11px;
+  line-height: 1;
+  user-select: none;
+}
+
+.admin-drag-handle:active {
+  cursor: grabbing;
+}
+
+.admin-drag-handle:disabled {
+  cursor: not-allowed;
+}
+
+[data-sortable-item] {
+  touch-action: manipulation;
+}
+
+.admin-inline-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.admin-inline-actions.compact {
+  justify-content: flex-end;
+}
+
+.admin-sm-button {
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: 0.15s ease;
+  border: 1px solid var(--admin-input-border);
+  background: var(--admin-card-bg);
+  color: var(--admin-text);
+  white-space: nowrap;
+}
+
+.admin-sm-button:hover:not(:disabled) {
+  border-color: var(--admin-input-hover-border);
+  background: var(--admin-nav-hover-bg);
+}
+
+.admin-sm-button.danger {
+  border-color: var(--admin-danger-border);
+  background: var(--admin-danger-bg);
+  color: var(--admin-danger);
+}
+
+.admin-sm-button.danger:hover:not(:disabled) {
+  background: var(--admin-danger-hover-bg);
+}
+
+.admin-sm-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.admin-primary-button,
+.admin-ghost-button,
+.admin-danger-button {
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.18s ease;
+}
+
+.admin-primary-button {
+  border: none;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.admin-ghost-button {
+  border: 1px solid var(--admin-input-border);
+  background: var(--admin-control-bg);
+  color: var(--admin-text);
+}
+
+.admin-ghost-button:hover:not(:disabled) {
+  border-color: var(--admin-input-hover-border);
+  background: var(--admin-control-hover-bg);
+}
+
+.admin-ghost-button.compact,
+.admin-danger-button.compact {
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+
+.admin-danger-button {
+  border: 1px solid var(--admin-danger-border);
+  background: var(--admin-danger-bg);
+  color: var(--admin-danger);
+}
+
+.admin-primary-button:disabled,
+.admin-ghost-button:disabled,
+.admin-danger-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.admin-sort-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 14px;
+  border: 1px solid var(--admin-border);
+  border-radius: 16px;
+  background: var(--admin-sticky-bg);
+  box-shadow: var(--admin-shadow);
+}
+
+.admin-sort-hint-inline {
+  color: var(--admin-muted);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-sort-hint {
+  color: var(--admin-subtle);
+  font-size: 12px;
+}
+
+.admin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--admin-subtle);
+  font-size: 13px;
+}
+
+.admin-pager-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.admin-empty-text,
+.admin-bookmark-cell p {
+  color: var(--admin-subtle);
+  line-height: 1.5;
+}
+
+.admin-table-wrap {
+  min-height: 0;
+  overflow: visible;
+}
+
+.admin-bookmark-search-bar {
+  margin: 0;
+}
+
+.admin-bookmark-search-bar input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--admin-input-border);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--admin-text);
+  background: var(--admin-input-bg);
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.admin-bookmark-search-bar input:focus {
+  outline: none;
+  border-color: var(--admin-accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.admin-bookmark-search-bar input::placeholder {
+  color: var(--admin-input-placeholder);
+}
+
+.admin-bookmark-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.admin-bookmark-table th,
+.admin-bookmark-table td {
+  padding: 10px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--admin-divider);
+  vertical-align: middle;
+  font-size: 13px;
+}
+
+.admin-bookmark-table th {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  background: var(--admin-th-bg);
+  font-size: 12px;
+  color: var(--admin-subtle);
+  font-weight: 600;
+}
+
+.admin-bookmark-table tr.is-sorting {
+  background: var(--admin-sort-highlight-bg);
+}
+
+.admin-bookmark-table td a {
+  color: var(--admin-link);
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.admin-bookmark-cell {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.admin-cat-cell,
+.admin-method-cell {
+  white-space: nowrap;
+  color: var(--admin-muted);
+}
+
+.admin-url-cell {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-url-cell a {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sortable-ghost {
+  opacity: 0.35;
+}
+
+.sortable-chosen {
+  cursor: grabbing;
+}
+
+.sortable-drag {
+  opacity: 1 !important;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.2);
+}
+
+@media (max-width: 960px) {
+  .admin-list-view {
+    gap: 16px;
+  }
+
+  .admin-list-panel-header,
+  .admin-list-toolbar,
+  .admin-panel-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .admin-panel-scroll-body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .admin-table-scroll-body {
+    padding: 0;
+  }
+
+  .admin-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-sort-bar {
+    bottom: 16px;
+  }
+
+  .admin-inline-actions.compact {
+    justify-content: flex-start;
+  }
+
+  .admin-compact-card {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px 10px;
+  }
+
+  .admin-compact-info {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .admin-inline-actions {
+    width: auto;
+  }
+
+  .admin-status-panel {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}

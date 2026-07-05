@@ -15,14 +15,12 @@
   import type { ChangePasswordReq } from '../../shared/types'
   import AdminSidebar from '../components/AdminSidebar.svelte'
   import BackupPanel from '../components/BackupPanel.svelte'
+  import BookmarkListPanel from '../components/admin/BookmarkListPanel.svelte'
+  import CategoryListPanel from '../components/admin/CategoryListPanel.svelte'
   import type { ImportSource } from '../lib/importData'
   import type { SettingsFormValue } from '../lib/appData'
   import type { AdminTab } from '../lib/adminTypes'
-  import { getBookmarkFallbackIcon, getBookmarkIconUrl, hasBookmarkImageIcon } from '../lib/bookmarkIconDisplay'
-  import { clampPage, pageCount, pageEnd, pageStart, slicePage } from '../lib/pagination'
-  import { reorderByIds } from '../lib/reorder'
-  import { sortableList, type SortHandler } from '../lib/sortableList'
-  import CachedBookmarkIcon from '../components/CachedBookmarkIcon.svelte'
+  import type { SortHandler } from '../lib/sortableList'
 
   type BookmarkCategoryOption = {
     id: string | number
@@ -118,114 +116,6 @@
       title: category.title,
     }))
 
-  // ========== 排序模式（先点“排序”进入，拖拽后点“保存”回写） ==========
-  let categorySortMode = false
-  let bookmarkSortMode = false
-  // 进入排序模式时对当前列表做本地快照，拖拽只改动快照，取消即丢弃。
-  let localCategories: AdminCategory[] = []
-  let localBookmarks: AdminBookmark[] = []
-  let savingSort = false
-  let categoryPage = 1
-  let bookmarkPage = 1
-
-  $: categoryTotalPages = pageCount(categories.length)
-  $: bookmarkTotalPages = pageCount(filteredBookmarks.length)
-  $: categoryPage = clampPage(categoryPage, categoryTotalPages)
-  $: bookmarkPage = clampPage(bookmarkPage, bookmarkTotalPages)
-  $: pagedCategories = slicePage(categories, categoryPage)
-  $: pagedBookmarks = slicePage(filteredBookmarks, bookmarkPage)
-  $: categoryTitleById = new Map(categories.map((category) => [category.id, category.title]))
-  // 排序模式下渲染本地快照全量列表，避免跨页排序造成全局顺序不完整。
-  $: displayCategories = categorySortMode ? localCategories : pagedCategories
-  $: displayBookmarks = bookmarkSortMode ? localBookmarks : pagedBookmarks
-
-  function enterCategorySort() {
-    localCategories = [...categories]
-    categoryPage = 1
-    categorySortMode = true
-  }
-
-  function cancelCategorySort() {
-    categorySortMode = false
-    localCategories = []
-  }
-
-  function handleReorderCategories(orderedIds: Array<string | number>) {
-    localCategories = reorderByIds(localCategories, orderedIds)
-  }
-
-  async function saveCategorySort() {
-    if (!onSortCategories) {
-      cancelCategorySort()
-      return
-    }
-    savingSort = true
-    try {
-      await onSortCategories(localCategories.map((item) => item.id))
-      categorySortMode = false
-      localCategories = []
-    } finally {
-      savingSort = false
-    }
-  }
-
-  function enterBookmarkSort() {
-    // 排序基于完整列表，进入排序模式前清空搜索，避免只对过滤子集排序。
-    bookmarkSearch = ''
-    bookmarkPage = 1
-    localBookmarks = [...bookmarks]
-    bookmarkSortMode = true
-  }
-
-  function cancelBookmarkSort() {
-    bookmarkSortMode = false
-    localBookmarks = []
-  }
-
-  function handleReorderBookmarks(orderedIds: Array<string | number>) {
-    localBookmarks = reorderByIds(localBookmarks, orderedIds)
-  }
-
-  async function saveBookmarkSort() {
-    if (!onSortBookmarks) {
-      cancelBookmarkSort()
-      return
-    }
-    savingSort = true
-    try {
-      await onSortBookmarks(localBookmarks.map((item) => item.id))
-      bookmarkSortMode = false
-      localBookmarks = []
-    } finally {
-      savingSort = false
-    }
-  }
-
-  const getCategoryTitle = (categoryId: string | number) =>
-    categories.find((category) => category.id === categoryId)?.title ?? '未分类'
-
-  const getBookmarksByCategory = (categoryId: string | number) =>
-    bookmarks.filter((bookmark) => bookmark.category_id === categoryId)
-
-  let bookmarkSearch = ''
-
-  function handleBookmarkSearchInput(event: Event) {
-    bookmarkSearch = (event.currentTarget as HTMLInputElement).value
-    bookmarkPage = 1
-  }
-
-  $: normalizedBookmarkSearch = bookmarkSearch.trim().toLowerCase()
-  $: filteredBookmarks = normalizedBookmarkSearch
-    ? bookmarks.filter((b) => {
-        const catTitle = (categoryTitleById.get(b.category_id) ?? '').toLowerCase()
-        return (
-          b.title.toLowerCase().includes(normalizedBookmarkSearch) ||
-          b.url.toLowerCase().includes(normalizedBookmarkSearch) ||
-          catTitle.includes(normalizedBookmarkSearch)
-        )
-      })
-    : bookmarks
-
   async function handleOpenLogin() {
     await onOpenLogin?.()
   }
@@ -234,13 +124,6 @@
     await onLogout?.()
   }
 
-  async function handleCreateCategory() {
-    await onOpenCreateCategory?.()
-  }
-
-  async function handleCreateBookmark(categoryId?: string | number) {
-    await onOpenCreateBookmark?.(categoryId)
-  }
 </script>
 
 <svelte:head>
@@ -305,278 +188,32 @@
     <!-- 右侧内容区 -->
     <div class="admin-content">
       {#if activeTab === 'categories'}
-        <div class="list-view">
-        <!-- 分类管理 -->
-        <section class="status-panel">
-          <div class="status-item">
-            <span class="status-label">登录状态</span>
-            <strong>{isAuthenticated ? '已登录' : '未登录'}</strong>
-          </div>
-          <div class="status-item">
-            <span class="status-label">分类数量</span>
-            <strong>{categories.length}</strong>
-          </div>
-          <div class="status-item">
-            <span class="status-label">书签数量</span>
-            <strong>{bookmarks.length}</strong>
-          </div>
-        </section>
-
-  <section class="panel list-panel category-list-panel">
-      <div class="panel-header list-panel-header">
-        <div>
-          <p class="panel-eyebrow">分类</p>
-          <h2>分类列表</h2>
-        </div>
-        <div class="header-actions">
-          {#if !categorySortMode}
-            <button
-              type="button"
-              class="ghost-button"
-              on:click={enterCategorySort}
-              disabled={!isAuthenticated || categoriesLoading || authLoading || categories.length < 2}
-            >
-              排序
-            </button>
-            <button type="button" class="primary-button" on:click={handleCreateCategory} disabled={!isAuthenticated}>
-              新增分类
-            </button>
-          {/if}
-        </div>
-      </div>
-
-      <div class="panel-scroll-body">
-        {#if categoriesLoading}
-          <p class="empty-text">分类加载中...</p>
-        {:else if categories.length === 0}
-          <p class="empty-text">暂无分类数据</p>
-        {:else}
-          <div
-            class="list-stack"
-            class:is-sorting={categorySortMode}
-            use:sortableList={{
-              enabled: categorySortMode,
-              onSort: handleReorderCategories,
-            }}
-          >
-            {#each displayCategories as category (category.id)}
-              <article class="compact-card" class:sortable={categorySortMode} data-sortable-item data-sort-id={category.id}>
-                {#if categorySortMode}
-                  <span class="drag-handle" aria-hidden="true">⋮⋮</span>
-                {/if}
-                <span class="icon-badge">{category.icon || '📁'}</span>
-                <div class="compact-info">
-                  <h3>{category.title}</h3>
-                  <span class="count-badge">{category.bookmarkCount ?? getBookmarksByCategory(category.id).length} 个书签</span>
-                </div>
-                {#if !categorySortMode}
-                  <div class="inline-actions">
-                    <button type="button" class="sm-button" on:click={() => onEditCategory?.(category)} disabled={!isAuthenticated}>
-                      编辑
-                    </button>
-                    <button type="button" class="sm-button" on:click={() => handleCreateBookmark(category.id)} disabled={!isAuthenticated}>
-                      加书签
-                    </button>
-                    <button
-                      type="button"
-                      class="sm-button danger"
-                      on:click={() => onDeleteCategory?.(category)}
-                      disabled={!isAuthenticated || deletingCategoryId === category.id}
-                    >
-                      {#if deletingCategoryId === category.id}删除中...{:else}删除{/if}
-                    </button>
-                  </div>
-                {/if}
-              </article>
-            {/each}
-          </div>
-        {/if}
-      </div>
-      {#if categories.length > 0}
-        <div class="panel-footer">
-          {#if categorySortMode}
-            <div class="sort-hint">拖动卡片调整顺序，完成后点击「保存排序」。</div>
-          {:else}
-            <div class="pagination">
-              <span>第 {pageStart(categoryPage, categories.length)}-{pageEnd(categoryPage, categories.length)} 条 / 共 {categories.length} 条</span>
-              <div class="pager-actions">
-                <button type="button" class="ghost-button compact" on:click={() => categoryPage -= 1} disabled={categoryPage <= 1}>上一页</button>
-                <span>{categoryPage} / {categoryTotalPages}</span>
-                <button type="button" class="ghost-button compact" on:click={() => categoryPage += 1} disabled={categoryPage >= categoryTotalPages}>下一页</button>
-              </div>
-            </div>
-          {/if}
-        </div>
-      {/if}
-    </section>
-        </div>
+        <CategoryListPanel
+          {isAuthenticated}
+          {authLoading}
+          {categories}
+          {bookmarks}
+          {categoriesLoading}
+          {deletingCategoryId}
+          {onOpenCreateCategory}
+          {onEditCategory}
+          {onDeleteCategory}
+          {onOpenCreateBookmark}
+          {onSortCategories}
+        />
       {:else if activeTab === 'bookmarks'}
-        <div class="list-view">
-        <!-- 书签管理 -->
-    <section class="panel wide-panel list-panel bookmark-list-panel">
-      <div class="panel-header list-panel-header">
-        <div>
-          <p class="panel-eyebrow">书签</p>
-          <h2>书签列表</h2>
-        </div>
-        <div class="header-actions">
-          <button
-            type="button"
-            class="ghost-button"
-            on:click={enterBookmarkSort}
-            disabled={bookmarkSortMode || !isAuthenticated || bookmarksLoading || authLoading || bookmarks.length < 2}
-          >
-            排序
-          </button>
-          <button
-            type="button"
-            class="primary-button"
-            on:click={() => handleCreateBookmark()}
-            disabled={bookmarkSortMode || !isAuthenticated || categories.length === 0}
-          >
-            新增书签
-          </button>
-        </div>
-      </div>
-
-      <div class="list-toolbar">
-        {#if !bookmarkSortMode}
-          <div class="bookmark-search-bar">
-            <input
-              type="text"
-              placeholder="搜索标题、链接或分类…"
-              value={bookmarkSearch}
-              on:input={handleBookmarkSearchInput}
-            />
-          </div>
-        {/if}
-      </div>
-
-      <div class="panel-scroll-body table-scroll-body">
-        {#if bookmarksLoading}
-          <p class="empty-text">书签加载中...</p>
-        {:else if bookmarks.length === 0}
-          <p class="empty-text">暂无书签数据</p>
-        {:else}
-          <div class="table-wrap">
-            <table class:is-sorting={bookmarkSortMode}>
-            <colgroup>
-              {#if bookmarkSortMode}<col style="width: 44px;" />{/if}
-              <col />
-              <col style="width: 88px;" />
-              <col />
-              <col style="width: 114px;" />
-              {#if !bookmarkSortMode}<col style="width: 122px;" />{/if}
-            </colgroup>
-            <thead>
-              <tr>
-                {#if bookmarkSortMode}<th style="width: 44px;">排序</th>{/if}
-                <th>标题</th>
-                <th style="width: 88px;">分类</th>
-                <th>链接</th>
-                <th style="width: 114px;">打开方式</th>
-                {#if !bookmarkSortMode}<th style="width: 122px;">操作</th>{/if}
-              </tr>
-            </thead>
-            <tbody
-              use:sortableList={{
-                enabled: bookmarkSortMode,
-                onSort: handleReorderBookmarks,
-                handle: '[data-drag-handle]',
-              }}
-            >
-              {#each displayBookmarks as bookmark (bookmark.id)}
-                <tr data-sortable-item data-sort-id={bookmark.id} class:is-sorting={bookmarkSortMode}>
-                  {#if bookmarkSortMode}
-                    <td>
-                      <button
-                        type="button"
-                        class="drag-handle"
-                        data-drag-handle
-                        aria-label={`拖动排序书签 ${bookmark.title}`}
-                      >
-                        ⋮⋮
-                      </button>
-                    </td>
-                  {/if}
-                  <td>
-                    <div class="bookmark-cell">
-                      <span class="icon-badge small" style={bookmark.icon_background_color ? `background: ${bookmark.icon_background_color};` : ''}>
-                        {#if hasBookmarkImageIcon(bookmark)}
-                          <CachedBookmarkIcon
-                            id={bookmark.id}
-                            icon={bookmark.icon ?? ''}
-                            iconSource={bookmark.icon_source}
-                            iconBlob={bookmark.icon_blob ?? ''}
-                            src={getBookmarkIconUrl(bookmark)}
-                            alt=""
-                            fallback={getBookmarkFallbackIcon(bookmark)}
-                            style="width: 100%; height: 100%; object-fit: contain;"
-                          />
-                        {:else}
-                          {getBookmarkFallbackIcon(bookmark)}
-                        {/if}
-                      </span>
-                      <div>
-                        <strong>{bookmark.title}</strong>
-                        {#if bookmark.description}
-                          <p>{bookmark.description}</p>
-                        {/if}
-                      </div>
-                    </div>
-                  </td>
-                  <td class="cat-cell">{getCategoryTitle(bookmark.category_id)}</td>
-                  <td class="url-cell">
-                    <a href={bookmark.url} target="_blank" rel="noreferrer">{bookmark.url}</a>
-                  </td>
-                  <td class="method-cell">
-                    {bookmark.open_method === 'same_tab' ? '当前标签页' : bookmark.open_method === 'modal' ? '当前页弹层' : '新标签页'}
-                  </td>
-                  {#if !bookmarkSortMode}
-                    <td>
-                      <div class="inline-actions compact">
-                        <button type="button" class="ghost-button compact" on:click={() => onEditBookmark?.(bookmark)} disabled={!isAuthenticated}>
-                          编辑
-                        </button>
-                        <button
-                          type="button"
-                          class="danger-button compact"
-                          on:click={() => onDeleteBookmark?.(bookmark)}
-                          disabled={!isAuthenticated || deletingBookmarkId === bookmark.id}
-                        >
-                          {#if deletingBookmarkId === bookmark.id}删除中...{:else}删除{/if}
-                        </button>
-                      </div>
-                    </td>
-                  {/if}
-                </tr>
-              {/each}
-            </tbody>
-            </table>
-            {#if !bookmarkSortMode && filteredBookmarks.length === 0}
-              <p class="empty-text" style="padding: 24px 0; text-align: center;">未找到匹配的书签。</p>
-            {/if}
-          </div>
-        {/if}
-      </div>
-      {#if bookmarks.length > 0}
-        <div class="panel-footer">
-          {#if bookmarkSortMode}
-            <div class="sort-hint">拖动行调整顺序，完成后点击「保存排序」。</div>
-          {:else}
-            <div class="pagination">
-              <span>第 {pageStart(bookmarkPage, filteredBookmarks.length)}-{pageEnd(bookmarkPage, filteredBookmarks.length)} 条 / 共 {filteredBookmarks.length} 条</span>
-              <div class="pager-actions">
-                <button type="button" class="ghost-button compact" on:click={() => bookmarkPage -= 1} disabled={bookmarkPage <= 1}>上一页</button>
-                <span>{bookmarkPage} / {bookmarkTotalPages}</span>
-                <button type="button" class="ghost-button compact" on:click={() => bookmarkPage += 1} disabled={bookmarkPage >= bookmarkTotalPages}>下一页</button>
-              </div>
-            </div>
-          {/if}
-        </div>
-      {/if}
-    </section>
-        </div>
+        <BookmarkListPanel
+          {isAuthenticated}
+          {authLoading}
+          {categories}
+          {bookmarks}
+          {bookmarksLoading}
+          {deletingBookmarkId}
+          {onOpenCreateBookmark}
+          {onEditBookmark}
+          {onDeleteBookmark}
+          {onSortBookmarks}
+        />
       {:else if activeTab === 'settings'}
         <!-- 站点设置 -->
   <section class="settings-panel-wrap">
@@ -610,29 +247,6 @@
     </div>
   </div>
 
-  {#if categorySortMode || bookmarkSortMode}
-    <div class="floating-sort-bar" role="toolbar" aria-label="排序操作">
-      <span class="floating-sort-hint">
-        {categorySortMode ? '正在排序分类' : '正在排序书签'}，拖动调整顺序后保存。
-      </span>
-      <button
-        type="button"
-        class="ghost-button"
-        on:click={categorySortMode ? cancelCategorySort : cancelBookmarkSort}
-        disabled={savingSort}
-      >
-        取消
-      </button>
-      <button
-        type="button"
-        class="primary-button"
-        on:click={categorySortMode ? saveCategorySort : saveBookmarkSort}
-        disabled={savingSort}
-      >
-        {#if savingSort}保存中...{:else}保存排序{/if}
-      </button>
-    </div>
-  {/if}
 </div>
 
 {#if CategoryEditModalComponent}
@@ -808,8 +422,7 @@
   }
 
   .page-header,
-  .panel,
-  .status-panel {
+  .panel {
     border: 1px solid var(--admin-border);
     border-radius: 18px;
     background: var(--admin-surface);
@@ -849,21 +462,7 @@
     padding-right: 4px;
   }
 
-  .list-view {
-    display: grid;
-    grid-template-rows: auto auto;
-    gap: 16px;
-    min-height: 0;
-    height: auto;
-    align-content: start;
-  }
-
-  .list-view > .list-panel:only-child {
-    grid-row: auto;
-  }
-
-  .eyebrow,
-  .panel-eyebrow {
+  .eyebrow {
     margin: 0 0 8px;
     font-size: 12px;
     letter-spacing: 0.08em;
@@ -872,8 +471,6 @@
   }
 
   h1,
-  h2,
-  h3,
   p {
     margin: 0;
   }
@@ -884,490 +481,19 @@
     margin-bottom: 0;
   }
 
-  h2 {
-    font-size: 22px;
-  }
-
-  h3 {
-    font-size: 18px;
-    margin-bottom: 6px;
-  }
-
-
-
-  .status-panel {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
-    padding: 16px 18px;
-  }
-
-  .status-item {
-    display: grid;
-    gap: 8px;
-  }
-
-  .status-label {
-    color: var(--admin-subtle);
-    font-size: 13px;
-  }
-
   .panel {
     padding: 18px;
   }
 
-  .list-panel {
-    display: grid;
-    min-height: 0;
-    height: auto;
-    align-self: start;
-    padding: 0;
-    overflow: hidden;
-  }
-
-  .category-list-panel {
-    grid-template-rows: auto minmax(0, auto) auto;
-  }
-
-  .bookmark-list-panel {
-    grid-template-rows: auto auto minmax(0, auto) auto;
-  }
-
-  .wide-panel {
-    min-width: 0;
-  }
-
-  .panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 14px;
-  }
-
-  .list-panel-header {
-    position: sticky;
-    top: 0;
-    z-index: 12;
-    margin: 0;
-    padding: 16px 18px 12px;
-    border-bottom: 1px solid var(--admin-divider);
-    background: var(--admin-sticky-bg);
-  }
-
-  .list-toolbar {
-    position: sticky;
-    top: 0;
-    z-index: 11;
-    padding: 10px 18px;
-    border-bottom: 1px solid var(--admin-divider);
-    background: var(--admin-sticky-bg);
-  }
-
-  .panel-scroll-body {
-    min-height: 0;
-    overflow: auto;
-    padding: 12px 18px;
-  }
-
-  .table-scroll-body {
-    padding: 0;
-    overflow: auto;
-  }
-
-  .panel-footer {
-    border-top: 1px solid var(--admin-divider);
-    background: var(--admin-sticky-bg);
-    padding: 10px 18px;
-  }
-
-  .list-stack {
-    display: grid;
-    gap: 8px;
-  }
-
-  /* 紧凑分类卡片 — 单行布局 */
-  .compact-card {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    border: 1px solid var(--admin-card-border);
-    border-radius: 12px;
-    background: var(--admin-card-bg);
-    transition: border-color 0.15s ease;
-  }
-
-  .compact-card:hover {
-    border-color: var(--admin-card-hover-border);
-  }
-
-  .compact-info {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .compact-info h3 {
-    margin: 0;
-    font-size: 14px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: var(--admin-text);
-  }
-
-  .count-badge {
-    flex-shrink: 0;
-    padding: 1px 8px;
-    border-radius: 10px;
-    background: var(--admin-badge-bg);
-    color: var(--admin-badge-text);
-    font-size: 11px;
-    font-weight: 500;
-    white-space: nowrap;
-  }
-
-  .bookmark-cell {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .drag-handle {
-    width: 24px;
-    height: 24px;
-    flex: 0 0 auto;
-    border: 1px solid var(--admin-card-border);
-    border-radius: 8px;
-    background: var(--admin-card-bg);
-    color: var(--admin-subtle);
-    cursor: grab;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    font-size: 11px;
-    line-height: 1;
-    user-select: none;
-  }
-
-  .drag-handle:active {
-    cursor: grabbing;
-  }
-
-  .drag-handle:disabled {
-    cursor: not-allowed;
-  }
-
-  [data-sortable-item] {
-    touch-action: manipulation;
-  }
-
-  /* 排序模式：面板头部按钮组 */
-  .header-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-shrink: 0;
-  }
-
-  /* 悬浮排序操作栏：固定在视口底部，长列表滚动时也能直接点保存 */
-  .floating-sort-bar {
-    position: fixed;
-    left: 50%;
-    bottom: 24px;
-    transform: translateX(-50%);
-    z-index: 60;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    max-width: calc(100vw - 32px);
-    padding: 10px 14px;
-    border: 1px solid var(--admin-border);
-    border-radius: 16px;
-    background: var(--admin-sticky-bg);
-    box-shadow: var(--admin-shadow);
-  }
-
-  .floating-sort-hint {
-    color: var(--admin-muted);
-    font-size: 13px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .sort-hint {
-    color: var(--admin-subtle);
-    font-size: 12px;
-  }
-
-  .pagination {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    color: var(--admin-subtle);
-    font-size: 13px;
-  }
-
-  .pager-actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    white-space: nowrap;
-  }
-
-  /* 排序模式下的分类卡片：整卡可拖，禁用文本选中 */
-  .compact-card.sortable {
-    cursor: grab;
-    user-select: none;
-    border-color: var(--admin-sort-highlight-border);
-    background: var(--admin-sort-highlight-bg);
-  }
-
-  .compact-card.sortable:active {
-    cursor: grabbing;
-  }
-
-  .list-stack.is-sorting .compact-card {
-    transition: none;
-  }
-
-  tr.is-sorting {
-    background: var(--admin-sort-highlight-bg);
-  }
-
-  /* SortableJS 拖拽态：稳定占位、抑制抖动 */
-  :global(.sortable-ghost) {
-    opacity: 0.35;
-  }
-
-  :global(.sortable-chosen) {
-    cursor: grabbing;
-  }
-
-  :global(.sortable-drag) {
-    opacity: 1 !important;
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.2);
-  }
-
-  .bookmark-cell p,
   .empty-text {
     color: var(--admin-subtle);
     line-height: 1.5;
-  }
-
-  .icon-badge {
-    width: 28px;
-    height: 28px;
-    flex: 0 0 auto;
-    border-radius: 8px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--admin-icon-badge-bg);
-    font-size: 14px;
-  }
-
-  .icon-badge.small {
-    width: 34px;
-    height: 34px;
-    font-size: 16px;
-  }
-
-  .inline-actions {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    flex-shrink: 0;
-  }
-
-  .inline-actions.compact {
-    justify-content: flex-end;
-  }
-
-  /* 紧凑型按钮 — 分类列表行内使用 */
-  .sm-button {
-    border-radius: 8px;
-    padding: 3px 10px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: 0.15s ease;
-    border: 1px solid var(--admin-input-border);
-    background: var(--admin-card-bg);
-    color: var(--admin-text);
-    white-space: nowrap;
-  }
-
-  .sm-button:hover:not(:disabled) {
-    border-color: var(--admin-input-hover-border);
-    background: var(--admin-nav-hover-bg);
-  }
-
-  .sm-button.danger {
-    border-color: var(--admin-danger-border);
-    background: var(--admin-danger-bg);
-    color: var(--admin-danger);
-  }
-
-  .sm-button.danger:hover:not(:disabled) {
-    background: var(--admin-danger-hover-bg);
-  }
-
-  .sm-button:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
-
-  .table-wrap {
-    min-height: 0;
-    overflow: visible;
-  }
-
-  .bookmark-search-bar {
-    margin: 0;
-  }
-
-  .bookmark-search-bar input {
-    width: 100%;
-    box-sizing: border-box;
-    border: 1px solid var(--admin-input-border);
-    border-radius: 10px;
-    padding: 9px 12px;
-    font-size: 13px;
-    color: var(--admin-text);
-    background: var(--admin-input-bg);
-    font-family: inherit;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  }
-
-  .bookmark-search-bar input:focus {
-    outline: none;
-    border-color: var(--admin-accent);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-  }
-
-  .bookmark-search-bar input::placeholder {
-    color: var(--admin-input-placeholder);
-  }
-
-  table {
-    width: 100%;
-    min-width: 760px;
-    border-collapse: collapse;
-  }
-
-  th,
-  td {
-    padding: 10px 10px;
-    text-align: left;
-    border-bottom: 1px solid var(--admin-divider);
-    vertical-align: middle;
-    font-size: 13px;
-  }
-
-  th {
-    position: sticky;
-    top: 0;
-    z-index: 8;
-    background: var(--admin-th-bg);
-    font-size: 12px;
-    color: var(--admin-subtle);
-    font-weight: 600;
-  }
-
-  td a {
-    color: var(--admin-link);
-    text-decoration: none;
-    word-break: break-all;
-  }
-
-  .cat-cell {
-    white-space: nowrap;
-    color: var(--admin-muted);
-  }
-
-  .url-cell {
-    max-width: 260px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .url-cell a {
-    display: inline-block;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .method-cell {
-    white-space: nowrap;
-    color: var(--admin-muted);
   }
 
   .settings-panel-wrap {
     min-width: 0;
     width: min(100%, 1320px);
     margin: 0 auto 24px;
-  }
-
-  .primary-button,
-  .ghost-button,
-  .danger-button {
-    border-radius: 12px;
-    padding: 10px 16px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: 0.18s ease;
-  }
-
-  .primary-button {
-    border: none;
-    background: #2563eb;
-    color: #ffffff;
-  }
-
-  .ghost-button {
-    border: 1px solid var(--admin-input-border);
-    background: var(--admin-control-bg);
-    color: var(--admin-text);
-  }
-
-  .ghost-button:hover:not(:disabled) {
-    border-color: var(--admin-input-hover-border);
-    background: var(--admin-control-hover-bg);
-  }
-
-  .ghost-button.compact {
-    padding: 5px 10px;
-    font-size: 12px;
-    border-radius: 8px;
-  }
-
-  .danger-button {
-    border: 1px solid var(--admin-danger-border);
-    background: var(--admin-danger-bg);
-    color: var(--admin-danger);
-  }
-
-  .danger-button.compact {
-    padding: 5px 10px;
-    font-size: 12px;
-    border-radius: 8px;
-  }
-
-  .primary-button:disabled,
-  .ghost-button:disabled,
-  .danger-button:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
   }
 
   @media (max-width: 960px) {
@@ -1383,10 +509,6 @@
       gap: 16px;
     }
 
-    .list-view {
-      gap: 16px;
-    }
-
     .admin-header-actions {
       top: 20px;
       right: 20px;
@@ -1398,64 +520,8 @@
       font-size: 1rem;
     }
 
-    .page-header,
-    .panel-header {
-      grid-template-columns: 1fr;
-    }
-
-    .page-header,
-    .panel-header,
-    .status-panel {
+    .page-header {
       display: grid;
-    }
-
-    .status-panel {
-      grid-template-columns: 1fr;
-    }
-
-    .list-panel-header,
-    .list-toolbar,
-    .panel-footer {
-      padding-left: 16px;
-      padding-right: 16px;
-    }
-
-    .panel-scroll-body {
-      padding-left: 16px;
-      padding-right: 16px;
-    }
-
-    .table-scroll-body {
-      padding: 0;
-    }
-
-    .pagination {
-      align-items: flex-start;
-      flex-direction: column;
-    }
-
-    .floating-sort-bar {
-      bottom: 16px;
-    }
-
-    .inline-actions.compact {
-      justify-content: flex-start;
-    }
-
-    /* 小屏时按钮文字缩略 */
-    .compact-card {
-      flex-wrap: wrap;
-      gap: 6px;
-      padding: 6px 10px;
-    }
-
-    .compact-info {
-      min-width: 0;
-      flex: 1 1 auto;
-    }
-
-    .inline-actions {
-      width: auto;
     }
   }
 </style>
