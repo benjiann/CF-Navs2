@@ -18,7 +18,7 @@ Observed:
 
 1. Aggregate data included cached image blobs.
    - Impact: Large network payloads, slower first authenticated load, larger Cache Storage use.
-   - Fix: Public and admin aggregate bookmark queries now return `NULL AS icon_blob`. Full icon blobs remain available through `/api/icon/:id`.
+   - Fix: Public and admin aggregate bookmark queries now return `NULL AS icon_blob` plus a lightweight `icon_cached` flag. Full icon blobs remain available through `/api/icon/:id`.
 
 2. Icon cache refresh invalidated aggregate data caches.
    - Impact: Fetching or generating an icon could invalidate public/admin runtime data even though aggregate responses no longer depend on `icon_blob`.

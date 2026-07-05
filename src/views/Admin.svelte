@@ -15,6 +15,7 @@
     icon_source?: string
     icon_background_color?: string
     icon_blob?: string
+    icon_cached?: boolean | number | null
     description?: string
     open_method?: 'same_tab' | 'new_tab' | 'modal'
   }
@@ -297,6 +298,9 @@
     if (/^https?:\/\//i.test(icon)) {
       return `/api/icon/${bookmark.id}?v=${createIconVersion(`${bookmark.id}:${icon}:${bookmark.title}:${bookmark.url}`)}`
     }
+    if (bookmark.icon_cached) {
+      return `/api/icon/${bookmark.id}?v=${createIconVersion(`${bookmark.id}:${bookmark.title}:${bookmark.url}:cached`)}`
+    }
     return icon
   }
 
@@ -309,6 +313,7 @@
         /^data:image\//i.test(cachedIcon) ||
         /^data:image\//i.test(icon) ||
         /^https?:\/\//i.test(icon) ||
+        Boolean(bookmark.icon_cached) ||
         bookmark.icon_source === 'iconify' ||
         isIconifyIconUrl(icon)
       ),

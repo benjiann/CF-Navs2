@@ -122,6 +122,7 @@
     iconSource: bookmark.icon_source,
   })
   $: hasEmbeddedIcon = /^data:image\//i.test(cachedIcon)
+  $: hasCachedRemoteIcon = Boolean(bookmark.icon_cached) && !hasEmbeddedIcon
   $: syncLocalCachedIconUrl = iconInView && !hasEmbeddedIcon
     ? readCachedBookmarkIconDataUri(localCacheKey) ?? ''
     : ''
@@ -141,12 +142,13 @@
     !customTextIcon
   $: shouldReadLocalIconCache =
     iconInView &&
-    Boolean(rawIcon) &&
+    (Boolean(rawIcon) || hasCachedRemoteIcon) &&
     !hasEmbeddedIcon &&
     bookmark.icon_source !== 'logo_surf' &&
     !customTextIcon
-  $: shouldWaitForLocalIconCache = shouldReadLocalIconCache && canUseRawHttpIconFallback
-  $: proxiedHttpIconUrl = canUseRawHttpIconFallback
+  $: shouldUseIconProxy = canUseRawHttpIconFallback || hasCachedRemoteIcon
+  $: shouldWaitForLocalIconCache = shouldReadLocalIconCache && shouldUseIconProxy
+  $: proxiedHttpIconUrl = shouldUseIconProxy
     ? `/api/icon/${encodeURIComponent(String(bookmark.id))}?v=${createIconVersion(`${bookmark.id}:${rawIcon}:${bookmark.title}:${bookmark.url}`)}`
     : ''
   $: if (nextIconStateKey !== iconStateKey) {
@@ -169,10 +171,10 @@
     if (syncLocalCachedIconUrl) return syncLocalCachedIconUrl
     if (localCachedIconUrl) return localCachedIconUrl
     if (localCachePending && shouldWaitForLocalIconCache) return ''
-    if (!rawIcon || customTextIcon) return ''
+    if ((!rawIcon && !hasCachedRemoteIcon) || customTextIcon) return ''
     if (iconifyRemoteUrl) return iconifyRemoteUrl
     if (/^data:image\//i.test(rawIcon)) return rawIcon
-    if (canUseRawHttpIconFallback) return proxiedHttpIconUrl
+    if (shouldUseIconProxy) return proxiedHttpIconUrl
     return ''
   })()
   $: hasRenderableIcon = Boolean(iconUrl) && !fallbackFailed

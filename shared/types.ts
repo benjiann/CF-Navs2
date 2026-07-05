@@ -20,6 +20,7 @@ export interface Bookmark {
   icon_source: IconSource | null // 图标获取方式（direct/favicon_im/logo_surf/google/iconify/custom）
   icon_background_color: string | null
   icon_blob: string | null // 图标 data URI 缓存（优先用于本地加载）
+  icon_cached?: boolean | number | null // Aggregate responses use this lightweight flag instead of sending icon_blob.
   description: string | null
   open_method: 1 | 2 | 3 // 1=新窗口 2=当前页 3=当前页弹层
   sort: number

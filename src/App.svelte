@@ -136,6 +136,7 @@
     icon_source?: string
     icon_background_color?: string
     icon_blob?: string
+    icon_cached?: boolean | number | null
     description?: string
     open_method?: 'same_tab' | 'new_tab' | 'modal'
   }> {
@@ -148,6 +149,7 @@
       icon_source: bookmark.icon_source ?? '',
       icon_background_color: bookmark.icon_background_color ?? '',
       icon_blob: bookmark.icon_blob ?? '',
+      icon_cached: bookmark.icon_cached ?? false,
       description: bookmark.description ?? '',
       open_method: bookmark.open_method === 2 ? 'same_tab' : bookmark.open_method === 3 ? 'modal' : 'new_tab',
     }))
@@ -163,6 +165,7 @@
       icon_source: bookmark.icon_source,
       icon_background_color: bookmark.icon_background_color,
       icon_blob: bookmark.icon_blob,
+      icon_cached: bookmark.icon_cached,
       description: bookmark.description,
       open_method: bookmark.open_method,
       sort: bookmark.sort,
