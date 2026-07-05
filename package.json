@@ -7,6 +7,7 @@
     "dev:web": "vite",
     "build": "vite build",
     "type-check": "tsc --noEmit && svelte-check --tsconfig ./tsconfig.json",
+    "perf:audit": "node scripts/perf-audit.mjs",
     "setup:wrangler": "node scripts/create-wrangler-local.mjs",
     "wrangler": "node scripts/wrangler-config.mjs",
     "dev": "node scripts/wrangler-config.mjs dev",
