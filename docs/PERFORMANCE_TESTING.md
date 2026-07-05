@@ -34,6 +34,18 @@ $env:PERF_AUDIT_ALLOW_FAILURES = '1'
 
 Use this only when collecting diagnostics from a known-bad run. By default, the script exits non-zero if it sees failed network requests or cannot complete a core scenario.
 
+Thresholds can be tuned per deployment:
+
+```powershell
+$env:PERF_MAX_FAILED_REQUESTS = '0'
+$env:PERF_MAX_ADMIN_DATA_TRANSFER = '60000'
+$env:PERF_MAX_CACHE_BYTES = '5242880'
+$env:PERF_MIN_BOOKMARK_CARDS = '300'
+$env:PERF_MAX_ICON_REQUESTS = '260'
+```
+
+The JSON output includes a `checks` array with pass/fail status, actual values, and expected thresholds.
+
 ## Covered Scenarios
 
 - Authenticated home reload.

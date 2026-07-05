@@ -22,7 +22,7 @@
   import { api, getErrorMessage, isApiError, isUnauthorizedError } from './lib/api'
   import { clearCachedAdminData, readCachedAdminDataEntry, writeCachedAdminData } from './lib/adminDataCache'
   import { colorToRgbString } from './lib/color'
-  import { prepareImportPayload, type ImportSource } from './lib/importData'
+  import type { ImportSource } from './lib/importData'
   import { clearCachedPublicData, readCachedPublicDataEntry, writeCachedPublicData } from './lib/publicDataCache'
   import { createBookmarkIconCacheKey, writeBookmarkIconDataUri } from './lib/localBookmarkIconCache'
   import { adminStore, authStore, configStore, isAuthenticated, publicStore } from './lib/stores'
@@ -1360,6 +1360,7 @@
         throw new Error('文件不是有效的 JSON')
       }
 
+      const { prepareImportPayload } = await import('./lib/importData')
       const prepared = prepareImportPayload(parsed, source)
 
       const confirmed = window.confirm(

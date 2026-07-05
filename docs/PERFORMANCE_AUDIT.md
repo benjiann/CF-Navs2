@@ -160,3 +160,19 @@ Fix:
 - `CategoryEditModal` now loads only when the category modal is opened.
 - Production build split Admin from about 113 KB to about 41 KB, with SettingsPanel in its own about 70 KB chunk and CategoryEditModal in its own about 5 KB chunk.
 - Retest showed the fixed real-browser audit still had zero failed requests, `/api/admin/data` stayed about 38 KB transferred, settings tab loaded and rendered its dynamic chunk, and CategoryEditModal assets were not requested during settings navigation.
+
+## 2026-07-05 Round 10
+
+Stress path: production build, authenticated home reload, admin entry, admin bookmark search, and the fixed real-browser audit.
+
+Observed:
+
+- The backup/import parser was statically imported by the app shell even though it is only needed when a user imports a backup file.
+- The real-browser audit emitted metrics but did not enforce thresholds by default, so regressions could be missed unless the JSON was inspected manually.
+
+Fix:
+
+- Backup/import parsing now loads through a dynamic import only when an import file is actually processed.
+- Production build split `importData` into an about 2 KB chunk and reduced the main `index` JS by about 2 KB.
+- `npm run perf:audit` now emits a `checks` array and exits non-zero when key thresholds fail. Thresholds cover failed requests, bookmark count, broken images, splash removal, search debounce behavior, admin search, `/api/admin/data` transfer size, icon request count, and Cache Storage bytes.
+- Retest after deployment showed every audit check passed, with zero failed requests, 337 home bookmark cards, 228 `/api/icon/*` requests, `/api/admin/data` about 38 KB transferred, and Cache Storage bytes under the configured 5 MB ceiling.

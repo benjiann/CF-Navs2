@@ -7,12 +7,22 @@
 //   BASE_URL=https://navs.bjlius.com
 //   CHROME_DEBUG_PORT=9223
 //   PERF_AUDIT_ALLOW_FAILURES=1
+//   PERF_MAX_FAILED_REQUESTS=0
+//   PERF_MAX_ADMIN_DATA_TRANSFER=60000
+//   PERF_MAX_CACHE_BYTES=5242880
+//   PERF_MIN_BOOKMARK_CARDS=300
+//   PERF_MAX_ICON_REQUESTS=260
 
 const BASE_URL = (process.env.BASE_URL || 'https://navs.bjlius.com').replace(/\/+$/, '')
 const CHROME_DEBUG_PORT = process.env.CHROME_DEBUG_PORT || '9223'
 const ADMIN_USER = process.env.ADMIN_USER || ''
 const ADMIN_PASS = process.env.ADMIN_PASS || ''
 const ALLOW_FAILURES = process.env.PERF_AUDIT_ALLOW_FAILURES === '1'
+const MAX_FAILED_REQUESTS = readIntegerEnv('PERF_MAX_FAILED_REQUESTS', 0)
+const MAX_ADMIN_DATA_TRANSFER = readIntegerEnv('PERF_MAX_ADMIN_DATA_TRANSFER', 60000)
+const MAX_CACHE_BYTES = readIntegerEnv('PERF_MAX_CACHE_BYTES', 5 * 1024 * 1024)
+const MIN_BOOKMARK_CARDS = readIntegerEnv('PERF_MIN_BOOKMARK_CARDS', 300)
+const MAX_ICON_REQUESTS = readIntegerEnv('PERF_MAX_ICON_REQUESTS', 260)
 
 const TARGET_ORIGIN = new URL(BASE_URL).origin
 const TARGET_URL = `${TARGET_ORIGIN}/`
@@ -31,6 +41,11 @@ function usageError(message) {
 
 if (!ADMIN_USER || !ADMIN_PASS) {
   usageError('Missing credentials.')
+}
+
+function readIntegerEnv(name, fallback) {
+  const parsed = Number.parseInt(process.env[name] || '', 10)
+  return Number.isFinite(parsed) ? parsed : fallback
 }
 
 function sleep(ms) {
@@ -459,6 +474,69 @@ function summarizeNetwork() {
   }
 }
 
+function auditCheck(name, passed, actual, expected) {
+  return { name, passed, actual, expected }
+}
+
+function collectAuditChecks(result) {
+  return [
+    auditCheck(
+      'failed network requests',
+      result.network.failed.length <= MAX_FAILED_REQUESTS,
+      result.network.failed.length,
+      `<= ${MAX_FAILED_REQUESTS}`,
+    ),
+    auditCheck(
+      'home bookmark card count',
+      result.homeBeforeScroll.bookmarkCards >= MIN_BOOKMARK_CARDS,
+      result.homeBeforeScroll.bookmarkCards,
+      `>= ${MIN_BOOKMARK_CARDS}`,
+    ),
+    auditCheck(
+      'home broken images',
+      result.homeBeforeScroll.brokenImages === 0 && result.scroll.brokenImages === 0,
+      result.homeBeforeScroll.brokenImages + result.scroll.brokenImages,
+      '0',
+    ),
+    auditCheck(
+      'startup splash removed',
+      result.homeBeforeScroll.splashCount === 0,
+      result.homeBeforeScroll.splashCount,
+      '0',
+    ),
+    auditCheck(
+      'home search debounced before settle',
+      result.homeSearch.afterRapid?.mutations === 0,
+      result.homeSearch.afterRapid?.mutations,
+      '0',
+    ),
+    auditCheck(
+      'admin search completed',
+      !result.adminSearch.error && result.adminSearch.afterSearch?.rows > 0,
+      result.adminSearch.error || result.adminSearch.afterSearch?.rows,
+      'rows > 0',
+    ),
+    auditCheck(
+      'admin data transfer',
+      Boolean(result.network.adminData) && result.network.adminData.transfer <= MAX_ADMIN_DATA_TRANSFER,
+      result.network.adminData?.transfer ?? null,
+      `<= ${MAX_ADMIN_DATA_TRANSFER}`,
+    ),
+    auditCheck(
+      'bookmark icon requests',
+      result.network.iconRequests <= MAX_ICON_REQUESTS,
+      result.network.iconRequests,
+      `<= ${MAX_ICON_REQUESTS}`,
+    ),
+    auditCheck(
+      'cache storage bytes',
+      result.storage.cacheBytes <= MAX_CACHE_BYTES,
+      result.storage.cacheBytes,
+      `<= ${MAX_CACHE_BYTES}`,
+    ),
+  ]
+}
+
 async function clearAuth() {
   try {
     await evaluate(`(() => { localStorage.removeItem('cf-navs.auth'); return true })()`)
@@ -502,14 +580,12 @@ async function main() {
       storage,
       network: networkSummary,
     }
+    const checks = collectAuditChecks(result)
+    result.checks = checks
 
     console.log(JSON.stringify(result, null, 2))
 
-    if (!ALLOW_FAILURES && networkSummary.failed.length > 0) {
-      process.exitCode = 1
-    }
-
-    if (!ALLOW_FAILURES && (homeSearch.error || adminSearch.error)) {
+    if (!ALLOW_FAILURES && checks.some((check) => !check.passed)) {
       process.exitCode = 1
     }
   } finally {
