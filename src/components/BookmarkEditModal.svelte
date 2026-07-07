@@ -30,6 +30,7 @@
     shouldResetBookmarkIconifyConfirmation,
     type BookmarkIconifySearchState,
   } from '../lib/bookmarkIconifyController'
+  import BookmarkBaseFields from './BookmarkBaseFields.svelte'
   import BookmarkCustomIconField from './BookmarkCustomIconField.svelte'
   import BookmarkIconCandidatePicker from './BookmarkIconCandidatePicker.svelte'
   import BookmarkModalActions from './BookmarkModalActions.svelte'
@@ -293,37 +294,15 @@
       <BookmarkModalHeader {mode} {loading} {deleting} onCancel={handleCancel} />
 
       <form class="modal-form" on:submit|preventDefault={handleSubmit}>
-        <label class="field-compact">
-          <span>所属分类</span>
-          <select bind:value={form.category_id} disabled={loading || categories.length === 0} required>
-            {#if categories.length === 0}
-              <option value="">暂无分类可选</option>
-            {:else}
-              {#each categories as category}
-                <option value={category.id}>{category.title}</option>
-              {/each}
-            {/if}
-          </select>
-        </label>
-
-        <label class="field-compact">
-          <span>书签标题</span>
-          <input bind:value={form.title} type="text" placeholder="例如：Svelte 官方网站" required />
-        </label>
-
-        <label class="field-compact">
-          <span>链接地址</span>
-          <input bind:value={form.url} type="url" placeholder="https://example.com" required />
-        </label>
-
-        <label class="field-compact">
-          <span>打开方式</span>
-          <select bind:value={form.open_method}>
-            <option value="new_tab">新标签页</option>
-            <option value="same_tab">当前标签页</option>
-            <option value="modal">当前页弹层</option>
-          </select>
-        </label>
+        <BookmarkBaseFields
+          bind:categoryId={form.category_id}
+          bind:title={form.title}
+          bind:url={form.url}
+          bind:openMethod={form.open_method}
+          bind:description={form.description}
+          {categories}
+          {loading}
+        />
 
         <BookmarkIconCandidatePicker
           {candidates}
@@ -381,11 +360,6 @@
           onIconInput={markCustomIconInput}
           onOpenImageHost={openImageHost}
         />
-
-        <label class="field-wide description-field">
-          <span>描述</span>
-          <textarea bind:value={form.description} rows="3" placeholder="补充说明，可选"></textarea>
-        </label>
 
         {#if error}
           <p class="error-text">{error}</p>
@@ -460,17 +434,12 @@
     padding: 10px 14px 0;
   }
 
-  label,
   .field-block {
     display: grid;
     min-width: 0;
     gap: 4px;
     color: #334155;
     font-size: 13px;
-  }
-
-  .field-wide {
-    grid-column: 1 / -1;
   }
 
   .field-compact {
@@ -481,43 +450,11 @@
     font-weight: 600;
   }
 
-  input,
-  select,
-  textarea {
-    width: 100%;
-    box-sizing: border-box;
-    border: 1px solid #cbd5e1;
-    border-radius: 9px;
-    padding: 6px 9px;
-    font-size: 13px;
-    color: #0f172a;
-    background: #ffffff;
-    font-family: inherit;
-  }
-
-  textarea {
-    resize: vertical;
-    min-height: 48px;
-  }
-
-  input:focus,
-  select:focus,
-  textarea:focus {
-    outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-  }
-
   .error-text {
     grid-column: 1 / -1;
     margin: 0;
     color: #dc2626;
     font-size: 13px;
-  }
-
-  select:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
   }
 
   .modal-card :global(.color-picker-row) {
@@ -557,8 +494,7 @@
       padding-left: 14px;
     }
 
-    .field-compact,
-    .field-wide {
+    .field-compact {
       grid-column: 1 / -1;
     }
   }
