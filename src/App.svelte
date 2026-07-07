@@ -16,6 +16,14 @@
   import type { BookmarkFormValue, CategoryFormValue } from './lib/adminTypes'
   import { toBookmarkForm, toBookmarkPayload, toCategoryForm, toCategoryPayload } from './lib/adminFormAdapters'
   import {
+    createConfirmDialogState,
+    createDeleteBookmarkConfirmation,
+    createDeleteCategoryConfirmation,
+    createImportOverwriteConfirmation,
+    type ConfirmDialogInput,
+    type ConfirmDialogState,
+  } from './lib/appConfirmDialog'
+  import {
     buildHomeBackground,
     toAdminBookmarks,
     toAdminCategories,
@@ -49,15 +57,6 @@
   type AppView = 'home' | 'admin' | 'login'
 
   type SettingsSubset = SettingsFormValue
-
-  type ConfirmDialogState = {
-    title: string
-    message: string
-    itemTitle: string
-    confirmLabel: string
-    cancelLabel: string
-    variant: 'default' | 'danger'
-  }
 
   let booting = true
   let rootError = ''
@@ -194,26 +193,12 @@
     return bookmarkEditModalPromise
   }
 
-  function requestConfirmation(options: {
-    title: string
-    message: string
-    itemTitle?: string
-    confirmLabel?: string
-    cancelLabel?: string
-    variant?: 'default' | 'danger'
-  }): Promise<boolean> {
+  function requestConfirmation(options: ConfirmDialogInput): Promise<boolean> {
     confirmDialogResolver?.(false)
 
     return new Promise((resolve) => {
       confirmDialogResolver = resolve
-      confirmDialog = {
-        title: options.title,
-        message: options.message,
-        itemTitle: options.itemTitle ?? '',
-        confirmLabel: options.confirmLabel ?? '确认',
-        cancelLabel: options.cancelLabel ?? '取消',
-        variant: options.variant ?? 'default',
-      }
+      confirmDialog = createConfirmDialogState(options)
     })
   }
 
@@ -443,13 +428,7 @@
   }
 
   async function handleDeleteCategory(category: { id: string | number; title: string }): Promise<void> {
-    const confirmed = await requestConfirmation({
-      title: '删除分类',
-      message: '删除后该分类及其下所有书签都会从首页和后台列表中移除，此操作不可撤销。',
-      itemTitle: category.title,
-      confirmLabel: '确认删除',
-      variant: 'danger',
-    })
+    const confirmed = await requestConfirmation(createDeleteCategoryConfirmation(category.title))
     if (!confirmed) return
 
     deletingCategoryId = Number(category.id)
@@ -535,13 +514,7 @@
   }
 
   async function handleDeleteBookmark(bookmark: { id: string | number; title: string }): Promise<void> {
-    const confirmed = await requestConfirmation({
-      title: '删除书签',
-      message: '删除后该书签会从首页和后台列表中移除，此操作不可撤销。',
-      itemTitle: bookmark.title,
-      confirmLabel: '确认删除',
-      variant: 'danger',
-    })
+    const confirmed = await requestConfirmation(createDeleteBookmarkConfirmation(bookmark.title))
     if (!confirmed) return
 
     deletingBookmarkId = Number(bookmark.id)
@@ -697,12 +670,7 @@
       const { prepareImportPayload } = await import('./lib/importData')
       const prepared = prepareImportPayload(parsed, source)
 
-      const confirmed = await requestConfirmation({
-        title: '导入并覆盖数据',
-        message: `导入 ${prepared.sourceLabel} 将覆盖现有的全部分类与书签（${prepared.categories} 个分类，${prepared.bookmarks} 个书签），此操作不可撤销。`,
-        confirmLabel: '确认导入',
-        variant: 'danger',
-      })
+      const confirmed = await requestConfirmation(createImportOverwriteConfirmation(prepared))
       if (!confirmed) {
         return
       }

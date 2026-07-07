@@ -31,25 +31,19 @@ describe('destructive action confirmation flow', () => {
   it('uses the shared ConfirmDialog flow for category deletion', () => {
     const body = extractFunctionBody(appSource, 'handleDeleteCategory')
 
-    expect(body).toContain('requestConfirmation({')
-    expect(body).toContain("title: '删除分类'")
-    expect(body).toContain('itemTitle: category.title')
-    expect(body).toContain("variant: 'danger'")
+    expect(body).toContain('requestConfirmation(createDeleteCategoryConfirmation(category.title))')
     expect(body).toContain('if (!confirmed) return')
     expect(body).toContain('await api.categories.remove(categoryId)')
   })
 
   it('confirms import overwrite before entering importing state', () => {
     const body = extractFunctionBody(appSource, 'handleImportData')
-    const confirmIndex = body.indexOf('requestConfirmation({')
+    const confirmIndex = body.indexOf('requestConfirmation(createImportOverwriteConfirmation(prepared))')
     const importingIndex = body.indexOf('importing = true')
     const importApiIndex = body.indexOf('api.data.importAll')
 
     expect(confirmIndex).toBeGreaterThanOrEqual(0)
     expect(importingIndex).toBeGreaterThan(confirmIndex)
     expect(importApiIndex).toBeGreaterThan(importingIndex)
-    expect(body).toContain("title: '导入并覆盖数据'")
-    expect(body).toContain("confirmLabel: '确认导入'")
-    expect(body).toContain("variant: 'danger'")
   })
 })

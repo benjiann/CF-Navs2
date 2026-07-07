@@ -80,6 +80,10 @@
   - `src/lib/appModalState.ts`
   - `tests/unit/appModalState.test.ts`
 - 当前只下沉无副作用逻辑：新建分类草稿、新建书签草稿、按 id 从后台/公开书签集合中查找可编辑书签。
+- 从 `src/App.svelte` 中抽出确认框状态与破坏性操作文案：
+  - `src/lib/appConfirmDialog.ts`
+  - `tests/unit/appConfirmDialog.test.ts`
+- `tests/unit/confirmationFlow.test.ts` 继续保护删除和导入流程：不使用 `window.confirm`，导入覆盖确认必须发生在 `importing = true` 和 API 调用之前。
 - `App.svelte` 仍保留 API 调用、store 更新、懒加载组件、弹窗开关、确认框 resolver 和错误状态。
 
 ## 当前大文件分布
@@ -152,7 +156,7 @@ https://navs.bjlius.com
 
 1. `src/App.svelte`
    - 建议按 use-case 拆分：bootstrap/refresh、local mutations、modal handlers、import/export、sort handlers。
-   - 已开始先抽无副作用的弹窗草稿/查找 helper。继续拆分前应补更多针对 modal handler、导入导出和排序回写的单元测试。
+   - 已开始先抽无副作用的弹窗草稿/查找 helper，以及确认框状态/文案 helper。继续拆分前应补更多针对导入导出和排序回写的单元测试。
 
 2. `worker/lib/db.ts`
    - 可以继续按数据域拆：category repository、bookmark repository、settings repository、import repository。
