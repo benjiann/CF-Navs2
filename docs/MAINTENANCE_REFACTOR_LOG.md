@@ -161,6 +161,15 @@
 - 单元测试覆盖：按标题/URL/分类名搜索、空搜索保留原列表、分类标题与计数 fallback、页码 clamp 与显示范围、排序草稿复制、按 id 重排和保存 id 输出。
 - 本轮保持 Svelte 组件继续持有 sort mode、search、page、savingSort 等 UI 状态，不抽完整 controller；测试文件数从 29 增至 30，测试数从 141 增至 146。
 
+### Round 16: Home section 导航纯逻辑下沉
+
+- 扩展首页数据 helper：
+  - `src/lib/homeData.ts`
+  - `tests/unit/homeNavigation.test.ts`
+- 从 `Home.svelte` 中下沉 section key 生成、active section fallback、IntersectionObserver 最近 section 选择和 smooth scroll 目标位置计算。
+- `Home.svelte` 继续保留搜索 debounce、DOM 查询、IntersectionObserver/fallback scroll 生命周期、`tick()` 后刷新 section elements 和滚动执行。
+- 单元测试覆盖：section key 稳定性、active section 可见性回退、最近 intersecting section 选择、滚动目标上下边界 clamp；测试文件数从 30 增至 31，测试数从 146 增至 150。
+
 ## 当前大文件分布
 
 截至本轮完成后，主要业务文件行数约为：
@@ -169,7 +178,7 @@
 869   src/App.svelte
 501   src/components/BookmarkEditModal.svelte
 459   src/components/SettingsPanel.svelte
-457   src/views/Home.svelte
+444   src/views/Home.svelte
 416   src/components/Sidebar.svelte
 396   src/app.css
 389   src/components/CategorySection.svelte
@@ -180,11 +189,12 @@
 322   src/views/Admin.svelte
 310   src/components/admin/adminListPanels.css
 302   src/components/admin/CategoryListPanel.svelte
+171   src/lib/homeData.ts
 148   src/components/admin/AdminTabContent.svelte
 93    src/lib/adminListState.ts
 ```
 
-`App.svelte` 仍是最大文件。它承担全局状态编排，包括登录、缓存、导入导出、CRUD 后本地增量更新、弹窗协调和排序回写。后续如果继续拆分，应按应用 use-case 或 controller 边界单独规划，不建议零散移动函数。`Home.svelte` 已降到约 457 行，继续拆分应优先考虑 section tracking/search controller 或分类列表展示边界。`Admin.svelte` 已降到约 322 行，页眉和 tab 内容外壳已拆出；`adminListPanels.css` 已从约 538 行降到约 310 行，剩余内容以共享列表壳、分页、状态卡片和排序样式为主；后台列表搜索、分页、排序 id 推导已有 `adminListState` 单元测试覆盖。`BookmarkCard.svelte` 已降到约 333 行，`BookmarkEditModal.svelte` 已降到约 501 行；二者后续更适合做运行时验证驱动的小步清理，而不是继续无边界拆分。
+`App.svelte` 仍是最大文件。它承担全局状态编排，包括登录、缓存、导入导出、CRUD 后本地增量更新、弹窗协调和排序回写。后续如果继续拆分，应按应用 use-case 或 controller 边界单独规划，不建议零散移动函数。`Home.svelte` 已降到约 444 行，section key、active fallback、intersection 最近项和滚动目标计算已有 `homeData` 单元测试覆盖；继续拆分应避免在缺少浏览器验证时大改 observer 生命周期。`Admin.svelte` 已降到约 322 行，页眉和 tab 内容外壳已拆出；`adminListPanels.css` 已从约 538 行降到约 310 行，剩余内容以共享列表壳、分页、状态卡片和排序样式为主；后台列表搜索、分页、排序 id 推导已有 `adminListState` 单元测试覆盖。`BookmarkCard.svelte` 已降到约 333 行，`BookmarkEditModal.svelte` 已降到约 501 行；二者后续更适合做运行时验证驱动的小步清理，而不是继续无边界拆分。
 
 ## 最近部署与生产验证
 
@@ -264,7 +274,8 @@ https://navs.bjlius.com
 
 2. `src/views/Home.svelte`
    - 已拆出顶部搜索、浮动操作、内容统计条和空状态面板。
-   - 后续可继续拆 section tracking/search controller 或分类列表展示，但不建议在缺少浏览器验证时大改滚动 observer 行为。
+   - 已补 section key、active fallback、intersection 最近项和 smooth scroll 目标计算 helper 测试。
+   - 后续如果继续 Home，应优先做浏览器验证；缺少验证时不建议继续大改滚动 observer 行为。
 
 3. `src/App.svelte`
    - 建议按 use-case 拆分：bootstrap/refresh、local mutations、modal handlers、import/export、sort handlers。

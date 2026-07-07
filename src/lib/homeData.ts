@@ -75,6 +75,48 @@ export function getHomeSections(
   }))
 }
 
+export function getHomeSectionsKey(sections: HomeSection[]): string {
+  return sections.map((section) => section.id).join('|')
+}
+
+export function resolveHomeActiveSectionId(sections: HomeSection[], activeId: string): string {
+  return sections.some((section) => section.id === activeId) ? activeId : sections[0]?.id ?? ''
+}
+
+export function getNearestIntersectingSectionId(intersectingSectionTops: Map<string, number>): string {
+  let nextActiveId = ''
+  let nearestDistance = Number.POSITIVE_INFINITY
+
+  for (const [sectionId, distance] of intersectingSectionTops) {
+    if (distance < nearestDistance) {
+      nearestDistance = distance
+      nextActiveId = sectionId
+    }
+  }
+
+  return nextActiveId
+}
+
+export type HomeScrollTargetInput = {
+  currentScroll: number
+  targetTop: number
+  windowHeight: number
+  documentHeight: number
+  desiredTopDistance?: number
+}
+
+export function getHomeScrollTarget({
+  currentScroll,
+  targetTop,
+  windowHeight,
+  documentHeight,
+  desiredTopDistance = 80,
+}: HomeScrollTargetInput): number {
+  const targetScroll = currentScroll + targetTop - desiredTopDistance
+  const maxScroll = documentHeight - windowHeight
+  return Math.max(0, Math.min(targetScroll, maxScroll))
+}
+
 export function createHomeDataMemo() {
   let sortedCategoriesSource: PublicCategory[] | null = null
   let sortedCategoriesMemo: PublicCategory[] = []

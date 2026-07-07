@@ -12,9 +12,13 @@
     clampTitleFontSize,
     createHomeDataMemo,
     getHomeSections,
+    getHomeSectionsKey,
+    getHomeScrollTarget,
+    getNearestIntersectingSectionId,
     getVisibleCategoryIds,
     groupBookmarksByCategory,
     normalizeSearchQuery,
+    resolveHomeActiveSectionId,
   } from '../lib/homeData'
 
   type AsyncVoid<T = void> = T | Promise<T>
@@ -71,7 +75,7 @@
 
   $: categoryBookmarks = groupBookmarksByCategory(visibleBookmarks)
   $: sections = getHomeSections(visibleCategories, categoryBookmarks)
-  $: nextSectionsKey = sections.map((section) => section.id).join('|')
+  $: nextSectionsKey = getHomeSectionsKey(sections)
   $: if (nextSectionsKey !== sectionsKey) {
     sectionsKey = nextSectionsKey
     void refreshSectionElementsAfterRender()
@@ -103,9 +107,7 @@
       ? `已整理 ${sortedCategories.length} 个分类，收录 ${totalBookmarks} 个站点。`
       : '一个简洁的公开导航首页。'
 
-  $: if (!sections.some((section) => section.id === activeId)) {
-    activeId = sections[0]?.id ?? ''
-  }
+  $: activeId = resolveHomeActiveSectionId(sections, activeId)
 
   function scheduleSearchFilterUpdate(value: string) {
     if (typeof window === 'undefined') {
@@ -195,16 +197,7 @@
   }
 
   function updateActiveSectionFromIntersections() {
-    let nextActiveId = ''
-    let nearestDistance = Number.POSITIVE_INFINITY
-
-    for (const [sectionId, distance] of intersectingSectionTops) {
-      if (distance < nearestDistance) {
-        nearestDistance = distance
-        nextActiveId = sectionId
-      }
-    }
-
+    const nextActiveId = getNearestIntersectingSectionId(intersectingSectionTops)
     if (nextActiveId && nextActiveId !== activeId) {
       activeId = nextActiveId
     }
@@ -257,18 +250,12 @@
     }
 
     const targetRect = targetElement.getBoundingClientRect()
-    const windowHeight = window.innerHeight
-    const documentHeight = document.documentElement.scrollHeight
-    const currentScroll = window.scrollY
-    const desiredTopDistance = 80
-    let targetScroll = currentScroll + targetRect.top - desiredTopDistance
-    const maxScroll = documentHeight - windowHeight
-
-    if (targetScroll > maxScroll) {
-      targetScroll = maxScroll
-    }
-
-    const finalScroll = Math.max(0, targetScroll)
+    const finalScroll = getHomeScrollTarget({
+      currentScroll: window.scrollY,
+      targetTop: targetRect.top,
+      windowHeight: window.innerHeight,
+      documentHeight: document.documentElement.scrollHeight,
+    })
 
     isScrolling = true
     activeId = String(id)
