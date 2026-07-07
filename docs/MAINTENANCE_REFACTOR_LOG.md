@@ -188,6 +188,14 @@
 - `App.svelte` 继续持有实际组件引用、弹窗打开状态和视图切换编排；分包路径、加载时机和渲染条件保持不变。
 - 单元测试覆盖：并发 ensure 只触发一次加载、组件已存在时不重复加载、加载失败后下一次可重试；测试文件数从 32 增至 33，测试数从 154 增至 157。
 
+### Round 19: worker 排序 SQL 分块 helper 测试
+
+- 从 `worker/lib/db/sort.ts` 中抽出排序 UPDATE SQL 与参数分块生成 helper：
+  - `buildSortUpdateChunks`
+  - `SORT_UPDATE_CHUNK_SIZE`
+- 新增 `tests/unit/dbSort.test.ts`，覆盖单批 SQL/参数顺序、跨 30 条分块时全局 sort 下标延续，以及空 id 列表不生成语句。
+- `sortRowsByIds` 继续负责 D1 `prepare/bind/run/batch` 执行，分类/书签路由调用面不变；测试文件数从 33 增至 34，测试数从 157 增至 160。
+
 ## 当前大文件分布
 
 截至本轮完成后，主要业务文件行数约为：
@@ -303,8 +311,8 @@ https://navs.bjlius.com
    - 继续拆 App 前应单独规划 modal handler/controller 边界，不建议零散移动事件处理函数。
 
 4. `worker/lib/db.ts`
-   - 可以继续按数据域拆：category repository、bookmark repository、settings repository、import repository。
-   - 需要保持现有 `db.ts` re-export 入口，减少 worker route import churn。
+   - `db.ts` 已是重导出入口，category/bookmark/settings/import 等数据域已拆到 `worker/lib/db/*`。
+   - 已补排序 SQL 分块纯 helper 测试；后续如果继续 worker，建议优先补 import/settings 的纯逻辑测试，而不是改路由导入路径。
 
 5. `BookmarkEditModal.svelte` / `BookmarkCard.svelte`
    - 已完成展示子组件、图标状态、交互决策、Iconify 搜索 controller、基础字段组件、本地图标缓存测试和图标候选按钮样式收敛。
