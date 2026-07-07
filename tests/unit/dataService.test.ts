@@ -56,8 +56,11 @@ vi.mock('../../src/lib/localBookmarkIconCache', () => ({
 }))
 
 import {
+  applyLocalBookmarkDelete,
+  applyLocalBookmarkSort,
   applyLocalBookmarkUpsert,
   applyLocalCategoryDelete,
+  applyLocalCategorySort,
   applyLocalCategoryUpsert,
   applyPublicData,
   configureDataService,
@@ -125,6 +128,23 @@ function makePublicData(version?: string): PublicData {
     bookmarks: [],
     settings: toPublicSettings(settings),
     ...(version ? { version } : {}),
+  }
+}
+
+function makePublicBookmark(item: Bookmark): PublicData['bookmarks'][number] {
+  return {
+    id: item.id,
+    category_id: item.category_id,
+    title: item.title,
+    url: item.url,
+    icon: item.icon,
+    icon_source: item.icon_source,
+    icon_background_color: item.icon_background_color,
+    icon_blob: item.icon_blob,
+    icon_cached: item.icon_cached,
+    description: item.description,
+    open_method: item.open_method,
+    sort: item.sort,
   }
 }
 
@@ -294,6 +314,44 @@ describe('dataService local mutations', () => {
     expect(get(adminStore).data.categories).toHaveLength(0)
     expect(get(adminStore).data.bookmarks).toHaveLength(0)
     expect(get(publicStore).data?.categories).toHaveLength(0)
+  })
+
+  it('removes a bookmark from both stores and persists', async () => {
+    publicStore.setData({ ...makePublicData(), bookmarks: [makePublicBookmark(bookmark)] })
+
+    await applyLocalBookmarkDelete(bookmark.id)
+
+    expect(get(adminStore).data.bookmarks).toHaveLength(0)
+    expect(get(publicStore).data?.bookmarks).toHaveLength(0)
+    expect(adminCache.writeCachedAdminData).toHaveBeenCalled()
+  })
+
+  it('sorts local categories and bookmarks without persisting during queued saves', async () => {
+    const nextCategory: Category = { ...category, id: 2, title: 'Docs', sort: 1 }
+    const nextBookmark: Bookmark = { ...bookmark, id: 11, title: 'Docs', sort: 1 }
+
+    adminStore.replaceData({
+      ...makeAdminData(),
+      categories: [category, nextCategory],
+      bookmarks: [bookmark, nextBookmark],
+    })
+    publicStore.setData({
+      ...makePublicData(),
+      categories: [
+        { id: category.id, title: category.title, icon: category.icon, sort: category.sort },
+        { id: nextCategory.id, title: nextCategory.title, icon: nextCategory.icon, sort: nextCategory.sort },
+      ],
+      bookmarks: [makePublicBookmark(bookmark), makePublicBookmark(nextBookmark)],
+    })
+
+    await applyLocalCategorySort([nextCategory.id, category.id], false)
+    await applyLocalBookmarkSort([nextBookmark.id, bookmark.id], false)
+
+    expect(get(adminStore).data.categories.map((item) => [item.id, item.sort])).toEqual([[2, 0], [1, 1]])
+    expect(get(publicStore).data?.categories.map((item) => [item.id, item.sort])).toEqual([[2, 0], [1, 1]])
+    expect(get(adminStore).data.bookmarks.map((item) => [item.id, item.sort])).toEqual([[11, 0], [10, 1]])
+    expect(get(publicStore).data?.bookmarks.map((item) => [item.id, item.sort])).toEqual([[11, 0], [10, 1]])
+    expect(adminCache.writeCachedAdminData).not.toHaveBeenCalled()
   })
 })
 

@@ -98,6 +98,16 @@
 - `App.svelte` 继续动态加载 `importData` 分包，只保留文件读取、覆盖确认、API 导入、store 更新和缓存持久化。
 - `App.svelte` 仍保留 API 调用、store 更新、懒加载组件、弹窗开关、确认框 resolver、错误状态和排序副作用编排。
 
+### Round 9: dataService 本地增量更新编排收敛
+
+- 在 `src/lib/dataService.ts` 中新增内部 `applyLocalDataMutation`，统一本地增量更新的重复步骤：
+  - 更新后台 store
+  - 更新公开 store
+  - 公开数据缺失时按登录状态刷新
+  - 按调用场景决定是否持久化后台快照
+- 分类/书签 upsert、删除和排序继续暴露原有函数名，`App.svelte` 调用面不变。
+- 扩展 `tests/unit/dataService.test.ts`，覆盖书签删除同步更新两个 store，以及排序队列路径下 `refreshMissing=false` 时只做乐观排序、不提前持久化。
+
 ## 当前大文件分布
 
 截至本轮完成后，主要业务文件行数约为：
@@ -114,7 +124,7 @@
 389   src/components/CategorySection.svelte
 388   src/lib/api.ts
 387   src/components/settings/CardSettingsSection.svelte
-372   src/lib/dataService.ts
+385   src/lib/dataService.ts
 ```
 
 `App.svelte` 仍是最大文件。它承担全局状态编排，包括登录、缓存、导入导出、CRUD 后本地增量更新、弹窗协调和排序回写。后续如果继续拆分，应按应用 use-case 或 controller 边界单独规划，不建议零散移动函数。`BookmarkCard.svelte` 已降到约 333 行，`BookmarkEditModal.svelte` 已降到约 501 行；二者后续更适合做运行时验证驱动的小步清理，而不是继续无边界拆分。

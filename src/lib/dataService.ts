@@ -183,6 +183,19 @@ function updateAdminBookmarksLocally(transform: (bookmarks: Bookmark[]) => Bookm
   adminStore.setBookmarks(transform(get(adminStore).data.bookmarks))
 }
 
+async function applyLocalDataMutation(input: {
+  updateAdmin: () => void
+  updatePublic: (data: PublicData) => PublicData
+  refreshMissing?: boolean
+  persist?: boolean
+}): Promise<void> {
+  input.updateAdmin()
+
+  const updated = updatePublicDataLocally(input.updatePublic)
+  if (!updated && (input.refreshMissing ?? true)) await refreshListsWhenLocalDataMissing()
+  if (input.persist ?? true) await persistCurrentAdminData()
+}
+
 async function refreshListsWhenLocalDataMissing(): Promise<void> {
   if (!get(publicStore).data) {
     if (isLoggedIn()) {
@@ -194,50 +207,46 @@ async function refreshListsWhenLocalDataMissing(): Promise<void> {
 }
 
 export async function applyLocalCategoryUpsert(category: Category): Promise<void> {
-  updateAdminCategoriesLocally((categories) => upsertCategory(categories, category))
-
-  const updated = updatePublicDataLocally((data) => {
-    return { ...data, categories: upsertPublicCategory(data.categories, category) }
+  await applyLocalDataMutation({
+    updateAdmin: () => {
+      updateAdminCategoriesLocally((categories) => upsertCategory(categories, category))
+    },
+    updatePublic: (data) => ({ ...data, categories: upsertPublicCategory(data.categories, category) }),
   })
-
-  if (!updated) await refreshListsWhenLocalDataMissing()
-  await persistCurrentAdminData()
 }
 
 export async function applyLocalCategoryDelete(categoryId: number): Promise<void> {
-  updateAdminCategoriesLocally((categories) => removeById(categories, categoryId))
-  updateAdminBookmarksLocally((bookmarks) => removeBookmarksByCategory(bookmarks, categoryId))
-
-  const updated = updatePublicDataLocally((data) => ({
-    ...data,
-    ...buildPublicDataAfterCategoryDelete(data.categories, data.bookmarks, categoryId),
-  }))
-
-  if (!updated) await refreshListsWhenLocalDataMissing()
-  await persistCurrentAdminData()
+  await applyLocalDataMutation({
+    updateAdmin: () => {
+      updateAdminCategoriesLocally((categories) => removeById(categories, categoryId))
+      updateAdminBookmarksLocally((bookmarks) => removeBookmarksByCategory(bookmarks, categoryId))
+    },
+    updatePublic: (data) => ({
+      ...data,
+      ...buildPublicDataAfterCategoryDelete(data.categories, data.bookmarks, categoryId),
+    }),
+  })
 }
 
 export async function applyLocalBookmarkUpsert(bookmark: Bookmark): Promise<void> {
-  updateAdminBookmarksLocally((bookmarks) => upsertBookmark(bookmarks, bookmark))
-
-  const updated = updatePublicDataLocally((data) => {
-    return { ...data, bookmarks: upsertPublicBookmark(data.bookmarks, bookmark) }
+  await applyLocalDataMutation({
+    updateAdmin: () => {
+      updateAdminBookmarksLocally((bookmarks) => upsertBookmark(bookmarks, bookmark))
+    },
+    updatePublic: (data) => ({ ...data, bookmarks: upsertPublicBookmark(data.bookmarks, bookmark) }),
   })
-
-  if (!updated) await refreshListsWhenLocalDataMissing()
-  await persistCurrentAdminData()
 }
 
 export async function applyLocalBookmarkDelete(bookmarkId: number): Promise<void> {
-  updateAdminBookmarksLocally((bookmarks) => removeById(bookmarks, bookmarkId))
-
-  const updated = updatePublicDataLocally((data) => ({
-    ...data,
-    bookmarks: removeById(data.bookmarks, bookmarkId),
-  }))
-
-  if (!updated) await refreshListsWhenLocalDataMissing()
-  await persistCurrentAdminData()
+  await applyLocalDataMutation({
+    updateAdmin: () => {
+      updateAdminBookmarksLocally((bookmarks) => removeById(bookmarks, bookmarkId))
+    },
+    updatePublic: (data) => ({
+      ...data,
+      bookmarks: removeById(data.bookmarks, bookmarkId),
+    }),
+  })
 }
 
 export async function applyLocalBookmarkIconBlob(bookmarkId: number, iconBlob: string | null): Promise<void> {
@@ -278,27 +287,31 @@ export function refreshBookmarkIconCacheInBackground(bookmarkId: number): void {
 }
 
 export async function applyLocalCategorySort(ids: number[], refreshMissing = true): Promise<void> {
-  updateAdminCategoriesLocally((categories) => applySortOrder(categories, ids))
-
-  const updated = updatePublicDataLocally((data) => ({
-    ...data,
-    categories: applySortOrder(data.categories, ids),
-  }))
-
-  if (!updated && refreshMissing) await refreshListsWhenLocalDataMissing()
-  if (refreshMissing) await persistCurrentAdminData()
+  await applyLocalDataMutation({
+    updateAdmin: () => {
+      updateAdminCategoriesLocally((categories) => applySortOrder(categories, ids))
+    },
+    updatePublic: (data) => ({
+      ...data,
+      categories: applySortOrder(data.categories, ids),
+    }),
+    refreshMissing,
+    persist: refreshMissing,
+  })
 }
 
 export async function applyLocalBookmarkSort(ids: number[], refreshMissing = true): Promise<void> {
-  updateAdminBookmarksLocally((bookmarks) => applySortOrder(bookmarks, ids))
-
-  const updated = updatePublicDataLocally((data) => ({
-    ...data,
-    bookmarks: applySortOrder(data.bookmarks, ids),
-  }))
-
-  if (!updated && refreshMissing) await refreshListsWhenLocalDataMissing()
-  if (refreshMissing) await persistCurrentAdminData()
+  await applyLocalDataMutation({
+    updateAdmin: () => {
+      updateAdminBookmarksLocally((bookmarks) => applySortOrder(bookmarks, ids))
+    },
+    updatePublic: (data) => ({
+      ...data,
+      bookmarks: applySortOrder(data.bookmarks, ids),
+    }),
+    refreshMissing,
+    persist: refreshMissing,
+  })
 }
 
 export async function applyLocalSettings(settings: Settings): Promise<void> {
