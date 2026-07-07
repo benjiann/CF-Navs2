@@ -40,6 +40,7 @@
   import { createBookmarkDraft, createCategoryDraft, findBookmarkForEdit } from './lib/appModalState'
   import { canSeeHomeView, getHomeGateView, type AppView } from './lib/appNavigation'
   import { isLatestSortRequest, normalizeSortIds, queueSortSave } from './lib/appSortQueue'
+  import { getNextThemePreference, resolveAppThemeState } from './lib/appThemeState'
   import type { ImportSource } from './lib/importData'
   import { pruneBookmarkIconCacheStorageBackedByLocalStorage } from './lib/localBookmarkIconCache'
   import { adminStore, authStore, configStore, isAuthenticated, publicStore } from './lib/stores'
@@ -132,9 +133,11 @@
   let mediaQuery: MediaQueryList | null = null
   let handleSystemThemeChange: ((event: MediaQueryListEvent) => void) | null = null
 
-  $: configuredThemeMode = publicData?.settings.theme ?? 'auto'
-  $: themeMode = preferredThemeMode ?? configuredThemeMode
-  $: activeTheme = themeMode === 'auto' ? (systemPrefersDark ? 'dark' : 'light') : themeMode
+  $: activeTheme = resolveAppThemeState({
+    preferredThemeMode,
+    configuredThemeMode: publicData?.settings.theme,
+    systemPrefersDark,
+  }).activeTheme
 
   $: homeBackgroundStyle = buildHomeBackground(publicData?.settings ?? null, activeTheme)
 
@@ -166,7 +169,7 @@
   }
 
   function handleToggleTheme(): void {
-    setPreferredThemeMode(activeTheme === 'dark' ? 'light' : 'dark')
+    setPreferredThemeMode(getNextThemePreference(activeTheme))
   }
 
   function ensureAdminComponent(): Promise<void> {
