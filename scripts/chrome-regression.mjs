@@ -144,6 +144,9 @@ function connect(target) {
     }
 
     if (message.method) {
+      if (message.method === 'Fetch.requestPaused') {
+        void fulfillBlockedWriteRequest(message.params)
+      }
       events.push(message)
       captureRuntimeEvent(message)
     }
@@ -203,6 +206,28 @@ function send(method, params = {}, timeoutMs = 30000) {
       },
     })
   })
+}
+
+async function fulfillBlockedWriteRequest(params) {
+  if (!params?.requestId) return
+
+  try {
+    await send('Fetch.fulfillRequest', {
+      requestId: params.requestId,
+      responseCode: 200,
+      responseHeaders: [
+        { name: 'content-type', value: 'application/json; charset=utf-8' },
+        { name: 'cache-control', value: 'no-store' },
+      ],
+      body: Buffer.from(JSON.stringify({
+        code: 0,
+        msg: 'ok',
+        data: { icon_blob: null },
+      })).toString('base64'),
+    })
+  } catch {
+    // If the request already continued or Chrome closed, do not fail cleanup.
+  }
 }
 
 async function evaluate(expression, timeoutMs = 30000) {
@@ -371,7 +396,7 @@ async function runApiChecks() {
 
     return {
       health: { status: health.status, code: health.code, okStatus: health.data?.status },
-      version: { status: version.status, code: version.code, hasVersion: typeof version.data?.version === 'number' },
+      version: { status: version.status, code: version.code, hasVersion: typeof version.data?.version === 'string' && version.data.version.length > 0 },
       config: {
         status: config.status,
         code: config.code,
@@ -397,8 +422,13 @@ async function runApiChecks() {
 async function runHomeChecks() {
   return pageFunction(async function homeChecks() {
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+    const byLabel = (label) =>
+      document.querySelector(`[aria-label="${label}"], [title="${label}"]`)
     const searchInput = document.querySelector('#search-query')
-    const themeButton = document.querySelector('[data-testid="home-theme-toggle"]')
+    const themeButton =
+      document.querySelector('[data-testid="home-theme-toggle"]') ||
+      byLabel('切换到深色模式') ||
+      byLabel('切换到浅色模式')
     const beforeTheme = document.documentElement.dataset.theme || ''
     themeButton?.click()
     await delay(100)
@@ -428,7 +458,7 @@ async function runHomeChecks() {
       title: document.title,
       splashCount: document.querySelectorAll('.app-splash').length,
       appShell: Boolean(document.querySelector('.app-shell')),
-      adminButton: Boolean(document.querySelector('[data-testid="home-admin-button"]')),
+      adminButton: Boolean(document.querySelector('[data-testid="home-admin-button"]') || byLabel('管理后台')),
       themeChanged: beforeTheme !== afterTheme,
       searchInput: Boolean(searchInput),
       bookmarkCards: beforeCards,
@@ -442,7 +472,9 @@ async function runHomeChecks() {
 async function openAdminFromHome() {
   const result = await pageFunction(async function clickAdmin() {
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-    const button = document.querySelector('[data-testid="home-admin-button"]')
+    const button =
+      document.querySelector('[data-testid="home-admin-button"]') ||
+      document.querySelector('[aria-label="管理后台"], [title="管理后台"]')
     if (!button) return { ok: false, error: 'home admin button not found' }
     button.click()
     for (let i = 0; i < 180; i += 1) {
@@ -458,8 +490,18 @@ async function openAdminFromHome() {
 async function runAdminChecks() {
   return pageFunction(async function adminChecks() {
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+    const buttonByText = (text) =>
+      Array.from(document.querySelectorAll('button'))
+        .find((button) => button.textContent?.includes(text))
     const click = async (selector) => {
       const button = document.querySelector(selector)
+      if (!button) return false
+      button.click()
+      await delay(450)
+      return true
+    }
+    const clickTab = async (testIdSelector, text) => {
+      const button = document.querySelector(testIdSelector) || buttonByText(text)
       if (!button) return false
       button.click()
       await delay(450)
@@ -471,8 +513,10 @@ async function runAdminChecks() {
       categoryStatus: Array.from(document.querySelectorAll('.admin-status-item strong')).map((node) => node.textContent?.trim() || ''),
     }
 
-    await click('[data-testid="admin-tab-bookmarks"]')
-    const bookmarkSearch = document.querySelector('[data-testid="admin-bookmark-search"]')
+    await clickTab('[data-testid="admin-tab-bookmarks"]', '书签管理')
+    const bookmarkSearch =
+      document.querySelector('[data-testid="admin-bookmark-search"]') ||
+      document.querySelector('.admin-bookmark-search-bar input, .bookmark-search-bar input')
     let bookmarkSearchResult = null
     if (bookmarkSearch) {
       bookmarkSearch.value = 'npm'
@@ -487,7 +531,7 @@ async function runAdminChecks() {
       bookmarkSearchResult.rowsAfterClear = document.querySelectorAll('tbody tr').length
     }
 
-    await click('[data-testid="admin-tab-settings"]')
+    await clickTab('[data-testid="admin-tab-settings"]', '站点设置')
     for (let i = 0; i < 80 && !document.querySelector('.settings-panel'); i += 1) {
       await delay(100)
     }
@@ -496,7 +540,7 @@ async function runAdminChecks() {
       inputs: document.querySelectorAll('.settings-panel input, .settings-panel select, .settings-panel textarea').length,
     }
 
-    await click('[data-testid="admin-tab-backup"]')
+    await clickTab('[data-testid="admin-tab-backup"]', '数据备份')
     const backup = {
       rendered: Boolean(document.querySelector('.backup-panel')),
       sourceSelect: Boolean(document.querySelector('#import-source')),
@@ -506,12 +550,12 @@ async function runAdminChecks() {
       importInput: Boolean(document.querySelector('.backup-panel input[type="file"]')),
     }
 
-    await click('[data-testid="admin-tab-categories"]')
+    await clickTab('[data-testid="admin-tab-categories"]', '分类管理')
 
     return {
       adminPage: Boolean(document.querySelector('.admin-page')),
-      homeButton: Boolean(document.querySelector('[data-testid="admin-home-button"]')),
-      logoutButton: Boolean(document.querySelector('[data-testid="admin-logout-button"]')),
+      homeButton: Boolean(document.querySelector('[data-testid="admin-home-button"], [aria-label="返回首页"], [title="返回首页"]')),
+      logoutButton: Boolean(document.querySelector('[data-testid="admin-logout-button"], [aria-label="退出登录"], [title="退出登录"]')),
       activeTab: document.querySelector('.admin-sidebar .active')?.textContent?.trim() || '',
       counts,
       bookmarkSearch: {
@@ -527,7 +571,9 @@ async function runAdminChecks() {
 async function runContextMenuChecks() {
   await pageFunction(async function returnHomeIfNeeded() {
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-    const homeButton = document.querySelector('[data-testid="admin-home-button"]')
+    const homeButton =
+      document.querySelector('[data-testid="admin-home-button"]') ||
+      document.querySelector('[aria-label="返回首页"], [title="返回首页"]')
     if (homeButton) {
       homeButton.click()
       for (let i = 0; i < 120; i += 1) {
@@ -574,7 +620,11 @@ async function runContextMenuChecks() {
   })
 
   const menu = await waitForCondition(function contextMenuVisible() {
-    return Boolean(document.querySelector('.bookmark-context-menu [data-testid="bookmark-context-edit"]'))
+    return Boolean(
+      document.querySelector('.bookmark-context-menu [data-testid="bookmark-context-edit"]') ||
+      Array.from(document.querySelectorAll('.bookmark-context-menu button'))
+        .some((button) => button.textContent?.includes('编辑'))
+    )
   }, 5000)
 
   if (!menu) {
@@ -583,17 +633,21 @@ async function runContextMenuChecks() {
 
   const modal = await pageFunction(async function openEditModal() {
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-    document.querySelector('[data-testid="bookmark-context-edit"]')?.click()
+    const editButton =
+      document.querySelector('[data-testid="bookmark-context-edit"]') ||
+      Array.from(document.querySelectorAll('.bookmark-context-menu button'))
+        .find((button) => button.textContent?.includes('编辑'))
+    editButton?.click()
     for (let i = 0; i < 120; i += 1) {
-      if (document.querySelector('[data-testid="bookmark-modal"]')) break
+      if (document.querySelector('[data-testid="bookmark-modal"], .modal-card[role="dialog"]')) break
       await delay(100)
     }
-    const dialog = document.querySelector('[data-testid="bookmark-modal"]')
-    const titleInput = Array.from(document.querySelectorAll('[data-testid="bookmark-modal"] input'))
+    const dialog = document.querySelector('[data-testid="bookmark-modal"], .modal-card[role="dialog"]')
+    const titleInput = Array.from(document.querySelectorAll('[data-testid="bookmark-modal"] input, .modal-card[role="dialog"] input'))
       .find((input) => input.placeholder?.includes('Svelte') || input.type === 'text')
-    const urlInput = Array.from(document.querySelectorAll('[data-testid="bookmark-modal"] input'))
+    const urlInput = Array.from(document.querySelectorAll('[data-testid="bookmark-modal"] input, .modal-card[role="dialog"] input'))
       .find((input) => input.type === 'url')
-    const cancel = Array.from(document.querySelectorAll('[data-testid="bookmark-modal"] button'))
+    const cancel = Array.from(document.querySelectorAll('[data-testid="bookmark-modal"] button, .modal-card[role="dialog"] button'))
       .find((button) => button.textContent?.trim() === '取消')
     const result = {
       opened: Boolean(dialog),
@@ -603,7 +657,7 @@ async function runContextMenuChecks() {
     }
     cancel?.click()
     await delay(150)
-    result.closed = !document.querySelector('[data-testid="bookmark-modal"]')
+    result.closed = !document.querySelector('[data-testid="bookmark-modal"], .modal-card[role="dialog"]')
     return result
   })
 
@@ -615,7 +669,8 @@ async function runLogoutCheck() {
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
     const button =
       document.querySelector('[data-testid="admin-logout-button"]') ||
-      document.querySelector('[data-testid="home-logout-button"]')
+      document.querySelector('[data-testid="home-logout-button"]') ||
+      document.querySelector('[aria-label="退出登录"], [title="退出登录"]')
     button?.click()
     for (let i = 0; i < 100; i += 1) {
       if (!localStorage.getItem('cf-navs.auth')) break
@@ -625,7 +680,7 @@ async function runLogoutCheck() {
     return {
       logoutButtonFound: Boolean(button),
       authCleared: !localStorage.getItem('cf-navs.auth'),
-      loginButtonVisible: Boolean(document.querySelector('[data-testid="home-login-button"], [data-testid="admin-login-button"]')),
+      loginButtonVisible: Boolean(document.querySelector('[data-testid="home-login-button"], [data-testid="admin-login-button"], [aria-label="管理员登录"], [title="管理员登录"]')),
       currentViewHome: Boolean(document.querySelector('.app-shell')),
     }
   })
@@ -727,6 +782,14 @@ async function main() {
   await send('Page.enable')
   await send('Runtime.enable')
   await send('Network.enable')
+  await send('Fetch.enable', {
+    patterns: [
+      {
+        urlPattern: '*/api/bookmarks/*/icon-cache/refresh',
+        requestStage: 'Request',
+      },
+    ],
+  })
 
   try {
     await send('Page.navigate', { url: TARGET_URL })
