@@ -13,7 +13,7 @@ This document records the current performance-sensitive behavior that should not
 
 - `/api/admin/data` and `/api/public/data` should stay lightweight.
 - Aggregate bookmark payloads should not include large icon blobs for normal authenticated/admin loading unless a specific workflow requires them.
-- The observed authenticated `/api/admin/data` transfer target is roughly 38 KB for the current 337-bookmark dataset.
+- The observed authenticated `/api/admin/data` transfer target is roughly 38 KB for the current 345-bookmark dataset.
 
 ## Bookmark Icons
 
@@ -43,7 +43,7 @@ Use `npm run perf:audit` after deployments that affect frontend loading, storage
 
 Expected current-shape results for `https://navs.bjlius.com`:
 
-- Home loads 337 bookmark cards across 11 sections.
+- Home loads 345 bookmark cards across 11 sections.
 - Rapid home search causes no DOM rebuild before the debounce settles.
 - Admin entry opens from the home toolbar after authenticated reload.
 - Admin bookmark search filters and clears without failed requests.
