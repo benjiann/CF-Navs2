@@ -227,10 +227,9 @@
 
 ## 最近部署与生产验证
 
-2026-07-09 已执行 `npm run deploy`，部署到 Cloudflare Worker：
+2026-07-09 已执行 `npm run deploy`，部署到 Cloudflare Worker；具体 Worker Version ID 以当轮部署命令输出为准，避免文档在后续文档-only 部署后过期。
 
 ```text
-Version ID: 816a7053-f3b1-405a-b928-32e0c995468d
 Production domain: https://navs.bjlius.com
 ```
 
