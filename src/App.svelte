@@ -10,9 +10,11 @@
     type ThemeMode,
   } from '../shared/types'
   import ConfirmDialog from './components/ConfirmDialog.svelte'
+  import Toast from './components/Toast.svelte'
   import Home from './views/Home.svelte'
   import { api, getErrorMessage, isUnauthorizedError } from './lib/api'
   import { clearCachedAdminData } from './lib/adminDataCache'
+  import { toastStore } from './lib/toast'
   import type { BookmarkFormValue, CategoryFormValue } from './lib/adminTypes'
   import { toBookmarkForm, toBookmarkPayload, toCategoryForm, toCategoryPayload } from './lib/adminFormAdapters'
   import {
@@ -423,10 +425,14 @@
         category = await api.categories.create(toCategoryPayload(form))
       }
 
-      resetCategoryState()
-      await applyLocalCategoryUpsert(category)
-    } catch (error) {
-      categoryError = getErrorMessage(error)
+     resetCategoryState()
+     await applyLocalCategoryUpsert(category)
+      toastStore.addToast(
+        categoryModalMode === 'edit' ? `分类「${category.title}」已更新` : `分类「${category.title}」已创建`,
+        'success',
+      )
+   } catch (error) {
+     categoryError = getErrorMessage(error)
     } finally {
       savingCategory = false
     }
@@ -442,9 +448,10 @@
     try {
       const categoryId = Number(category.id)
       await api.categories.remove(categoryId)
-      await applyLocalCategoryDelete(categoryId)
-    } catch (error) {
-      categoryError = getErrorMessage(error)
+     await applyLocalCategoryDelete(categoryId)
+      toastStore.addToast(`分类「${category.title}」已删除`, 'success')
+   } catch (error) {
+     categoryError = getErrorMessage(error)
     } finally {
       deletingCategoryId = null
     }
@@ -510,9 +517,13 @@
 
       resetBookmarkState()
       await applyLocalBookmarkUpsert(bookmark)
-      refreshBookmarkIconCacheInBackground(bookmark.id)
-    } catch (error) {
-      bookmarkError = getErrorMessage(error)
+     refreshBookmarkIconCacheInBackground(bookmark.id)
+      toastStore.addToast(
+        bookmarkModalMode === 'edit' ? `书签「${bookmark.title}」已更新` : `书签「${bookmark.title}」已创建`,
+        'success',
+      )
+   } catch (error) {
+     bookmarkError = getErrorMessage(error)
     } finally {
       savingBookmark = false
     }
@@ -529,9 +540,10 @@
       const bookmarkId = Number(bookmark.id)
       await api.bookmarks.remove(bookmarkId)
       resetBookmarkState()
-      await applyLocalBookmarkDelete(bookmarkId)
-    } catch (error) {
-      bookmarkError = getErrorMessage(error)
+     await applyLocalBookmarkDelete(bookmarkId)
+      toastStore.addToast(`书签「${bookmark.title}」已删除`, 'success')
+   } catch (error) {
+     bookmarkError = getErrorMessage(error)
     } finally {
       deletingBookmarkId = null
     }
@@ -543,9 +555,10 @@
 
     try {
       const settings = await api.settings.update(payload)
-      await applyLocalSettings(settings)
-    } catch (error) {
-      settingsError = getErrorMessage(error)
+     await applyLocalSettings(settings)
+      toastStore.addToast('设置已保存', 'success')
+   } catch (error) {
+     settingsError = getErrorMessage(error)
     } finally {
       savingSettings = false
     }
@@ -643,6 +656,7 @@
       anchor.remove()
       URL.revokeObjectURL(href)
       backupMessage = artifact.message
+      toastStore.addToast(artifact.message, 'success')
     } catch (error) {
       backupError = getErrorMessage(error)
     }
@@ -667,6 +681,7 @@
       applyLoggedInData(result.data)
       await persistCurrentAdminData()
       backupMessage = createImportSuccessMessage(result)
+      toastStore.addToast(backupMessage, 'success')
     } catch (error) {
       backupError = getErrorMessage(error)
     } finally {
@@ -722,6 +737,7 @@
   </div>
 {:else}
   <div class="app-shell" in:fade={{ duration: prefersReducedMotion ? 0 : 260, delay: prefersReducedMotion ? 0 : 60 }}>
+    <Toast />
     {#if rootError}
       <div class="app-alert">{rootError}</div>
     {/if}
