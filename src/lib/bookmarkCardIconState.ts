@@ -87,14 +87,12 @@ export function deriveBookmarkCardIconBase(input: BookmarkCardIconBaseInput): Bo
   const canUseRawHttpIconFallback =
     /^https?:\/\//i.test(rawIcon) &&
     !iconifyRemoteUrl &&
-    bookmark.icon_source !== 'logo_surf' &&
     !customTextIcon
   const shouldReadLocalIconCache =
     iconInView &&
-    Boolean(rawIcon) &&
+    (canUseRawHttpIconFallback || hasCachedRemoteIcon) &&
     !iconifyRemoteUrl &&
     !hasEmbeddedIcon &&
-    bookmark.icon_source !== 'logo_surf' &&
     !customTextIcon
   const shouldUseIconProxy = canUseRawHttpIconFallback || hasCachedRemoteIcon
   const proxiedHttpIconUrl = shouldUseIconProxy
@@ -148,8 +146,9 @@ export function deriveBookmarkCardIconUrl(input: BookmarkCardIconUrlInput): Book
 
   const iconUrl = (() => {
     if (!baseState.iconInView) return ''
-    if (bookmark.icon_source === 'logo_surf') return bookmark.icon || logoSurfIcon(bookmark.title, bookmark.url)
     if (!cachedIconFailed && hasEmbeddedIcon) return cachedIcon
+    if (bookmark.icon_source === 'logo_surf' && !rawIcon) return logoSurfIcon(bookmark.title, bookmark.url)
+    if (bookmark.icon_source === 'logo_surf' && /^data:image\//i.test(rawIcon)) return rawIcon
     if (syncLocalCachedIconUrl) return syncLocalCachedIconUrl
     if (localCachedIconUrl) return localCachedIconUrl
     if (localCachePending && shouldWaitForLocalIconCache) return ''

@@ -65,6 +65,17 @@ describe('bookmark card icon state', () => {
     expect(generated).toContain('<svg')
   })
 
+  it('proxies saved remote logo.surf icons instead of loading third-party favicon URLs directly', () => {
+    const result = state({
+      icon: 'https://www.google.com/s2/favicons?sz=64&domain=example.com',
+      icon_source: 'logo_surf',
+    })
+
+    expect(result.iconUrl).toContain('/api/icon/42?v=')
+    expect(result.canUseRawHttpIconFallback).toBe(true)
+    expect(result.shouldReadLocalIconCache).toBe(true)
+  })
+
   it('uses embedded icon blobs before remote icon URLs', () => {
     const result = state({
       icon: 'https://example.com/icon.png',
@@ -144,6 +155,6 @@ describe('bookmark card icon state', () => {
     })
 
     expect(base.shouldWaitForLocalIconCache).toBe(true)
-    expect(base.shouldReadLocalIconCache).toBe(true)
+    expect(base.shouldReadLocalIconCache).toBe(false)
   })
 })
