@@ -18,14 +18,16 @@
   import type { BookmarkFormValue, CategoryFormValue } from './lib/adminTypes'
   import { toBookmarkForm, toBookmarkPayload, toCategoryForm, toCategoryPayload } from './lib/adminFormAdapters'
   import {
-    createImportSuccessMessage,
-  } from './lib/appBackup'
-  import { createBackupExportArtifact } from './lib/appBackup'
+    createImportExportState,
+    exportDataToFile,
+    importDataFromFile,
+    type ImportDeps,
+    type ImportExportState,
+  } from './lib/appImportExport'
   import {
     createConfirmDialogState,
     createDeleteBookmarkConfirmation,
     createDeleteCategoryConfirmation,
-    createImportOverwriteConfirmation,
     type ConfirmDialogInput,
     type ConfirmDialogState,
   } from './lib/appConfirmDialog'
@@ -119,9 +121,7 @@
   let bookmarkError = ''
   let settingsError = ''
 
-  let importing = false
-  let backupError = ''
-  let backupMessage = ''
+  const importExportState = createImportExportState()
   let preferredThemeMode: ThemeMode | null = null
   let prefersReducedMotion = false
   let categorySortSavePromise: Promise<void> = Promise.resolve()
@@ -641,52 +641,16 @@
   }
 
   function handleExportData(): void {
-    backupError = ''
-    backupMessage = ''
-
-    try {
-      const artifact = createBackupExportArtifact(adminData)
-      const blob = new Blob([artifact.json], { type: 'application/json' })
-      const href = URL.createObjectURL(blob)
-      const anchor = document.createElement('a')
-      anchor.href = href
-      anchor.download = artifact.fileName
-      document.body.appendChild(anchor)
-      anchor.click()
-      anchor.remove()
-      URL.revokeObjectURL(href)
-      backupMessage = artifact.message
-      toastStore.addToast(artifact.message, 'success')
-    } catch (error) {
-      backupError = getErrorMessage(error)
-    }
+    exportDataToFile(importExportState, adminData)
   }
 
   async function handleImportData(file: File, source: ImportSource): Promise<void> {
-    backupError = ''
-    backupMessage = ''
-
-    try {
-      const text = await file.text()
-      const { prepareImportText } = await import('./lib/importData')
-      const prepared = prepareImportText(text, source)
-
-      const confirmed = await requestConfirmation(createImportOverwriteConfirmation(prepared))
-      if (!confirmed) {
-        return
-      }
-
-      importing = true
-      const result = await api.data.importAll(prepared.payload)
-      applyLoggedInData(result.data)
-      await persistCurrentAdminData()
-      backupMessage = createImportSuccessMessage(result)
-      toastStore.addToast(backupMessage, 'success')
-    } catch (error) {
-      backupError = getErrorMessage(error)
-    } finally {
-      importing = false
-    }
+    await importDataFromFile(importExportState, file, source, {
+      adminData,
+      requestConfirmation,
+      applyLoggedInData,
+      persistCurrentAdminData,
+    })
   }
 
   onMount(() => {
@@ -805,9 +769,9 @@
         onChangePassword={handleChangePassword}
         onSortCategories={handleSortCategories}
         onSortBookmarks={handleSortBookmarks}
-        importing={importing}
-        backupError={backupError}
-        backupMessage={backupMessage}
+        importing={importExportState.importing}
+        backupError={importExportState.backupError}
+        backupMessage={importExportState.backupMessage}
         onExportData={handleExportData}
         onImportData={handleImportData}
       />

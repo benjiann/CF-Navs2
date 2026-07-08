@@ -37,9 +37,11 @@ describe('destructive action confirmation flow', () => {
   })
 
   it('confirms import overwrite before entering importing state', () => {
-    const body = extractFunctionBody(appSource, 'handleImportData')
-    const confirmIndex = body.indexOf('requestConfirmation(createImportOverwriteConfirmation(prepared))')
-    const importingIndex = body.indexOf('importing = true')
+    // import/export controller was extracted to appImportExport.ts -- verify ordering there
+    const importExportSource = readFileSync(new URL('../../src/lib/appImportExport.ts', import.meta.url), 'utf8')
+    const body = extractFunctionBody(importExportSource, 'importDataFromFile')
+    const confirmIndex = body.indexOf('createImportOverwriteConfirmation(prepared)')
+    const importingIndex = body.indexOf('state.importing = true')
     const importApiIndex = body.indexOf('api.data.importAll')
 
     expect(confirmIndex).toBeGreaterThanOrEqual(0)
