@@ -8,6 +8,7 @@
 //   CHROME_DEBUG_PORT=9228
 //   CHROME_EXE="C:\Program Files\Google\Chrome\Application\chrome.exe"
 //   CHROME_USER_DATA_DIR=D:\tmp\cf-navs-chrome-profile-9228
+//   REGRESSION_FORCE_TEMP_CHROME=1
 //   REGRESSION_ALLOW_FAILURES=1
 //   REGRESSION_MIN_BOOKMARK_CARDS=1
 //   REGRESSION_MIN_CATEGORIES=1
@@ -27,6 +28,7 @@ const CHROME_USER_DATA_DIR =
   process.env.CHROME_USER_DATA_DIR || `D:\\tmp\\cf-navs-chrome-profile-${CHROME_DEBUG_PORT}`
 const ADMIN_USER = process.env.ADMIN_USER || ''
 const ADMIN_PASS = process.env.ADMIN_PASS || ''
+const FORCE_TEMP_CHROME = process.env.REGRESSION_FORCE_TEMP_CHROME === '1'
 const ALLOW_FAILURES = process.env.REGRESSION_ALLOW_FAILURES === '1'
 const MIN_BOOKMARK_CARDS = readIntegerEnv('REGRESSION_MIN_BOOKMARK_CARDS', 1)
 const MIN_CATEGORIES = readIntegerEnv('REGRESSION_MIN_CATEGORIES', 1)
@@ -89,10 +91,20 @@ async function isChromeDebugPortReady() {
 }
 
 async function ensureChrome() {
-  if (await isChromeDebugPortReady()) return
+  if (await isChromeDebugPortReady()) {
+    if (FORCE_TEMP_CHROME) {
+      throw new Error(
+        `REGRESSION_FORCE_TEMP_CHROME=1 but ${DEBUG_ENDPOINT} is already in use. ` +
+          'Choose a free CHROME_DEBUG_PORT so the regression run cannot attach to an existing browser.',
+      )
+    }
+    return
+  }
 
-  const active = await readDevToolsActivePort()
-  if (active) return
+  if (!FORCE_TEMP_CHROME) {
+    const active = await readDevToolsActivePort()
+    if (active) return
+  }
 
   if (!existsSync(CHROME_EXE)) {
     throw new Error(`Chrome debug port is unavailable and CHROME_EXE was not found: ${CHROME_EXE}`)
@@ -849,7 +861,7 @@ async function cleanup() {
 async function main() {
   const startedAt = new Date().toISOString()
   await ensureChrome()
-  const activeTarget = await readDevToolsActivePort()
+  const activeTarget = FORCE_TEMP_CHROME ? null : await readDevToolsActivePort()
   if (activeTarget && !(await isChromeDebugPortReady())) {
     await connectBrowserSession(activeTarget)
   } else {
@@ -891,6 +903,7 @@ async function main() {
       chromeConnectionMode,
       chromeConnectedPort,
       startedChrome,
+      forceTempChrome: FORCE_TEMP_CHROME,
       api,
       home,
       openAdmin,
