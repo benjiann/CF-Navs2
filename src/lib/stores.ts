@@ -104,6 +104,36 @@ function createPublicStore() {
     refresh,
     reset: () => set(createLoadableState<PublicData | null>(null)),
     setData: (data: PublicData | null) => set({ data, loading: false, loaded: data !== null, error: null }),
+    setDataProgressively: (data: PublicData) => {
+      const BATCH_SIZE = 60
+      const all = data.bookmarks
+      if (all.length <= BATCH_SIZE) {
+        set({ data, loading: false, loaded: true, error: null })
+        return
+      }
+      // First batch renders immediately
+      set({
+        data: { ...data, bookmarks: all.slice(0, BATCH_SIZE) },
+        loading: false,
+        loaded: true,
+        error: null,
+      })
+      // Schedule remaining batches via microtasks
+      let offset = BATCH_SIZE
+      const addMore = () => {
+        if (offset >= all.length) return
+        const end = Math.min(offset + BATCH_SIZE, all.length)
+        set({
+          data: { ...data, bookmarks: all.slice(0, end) },
+          loading: false,
+          loaded: true,
+          error: null,
+        })
+        offset = end
+        if (offset < all.length) setTimeout(addMore, 0)
+      }
+      setTimeout(addMore, 16)
+    },
   }
 }
 

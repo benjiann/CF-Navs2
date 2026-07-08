@@ -270,7 +270,7 @@
         await refreshPublicData()
       }
     } else {
-      await refreshPublicData()
+      await refreshPublicData(true)
     }
 
     const homeGate = createHomeGateState({

@@ -72,13 +72,17 @@ function applyConfigFromPublicData(data: PublicData): void {
   })
 }
 
-export function applyPublicData(data: PublicData, version = getDataVersion(data)): PublicData {
+export function applyPublicData(data: PublicData, version = getDataVersion(data), progressive = false): PublicData {
   const cleanData = stripPublicDataVersion(data)
   const currentState = get(publicStore)
   const merged = mergePublicData(currentState.data, cleanData)
 
   if (!currentState.loaded || merged !== currentState.data) {
-    publicStore.setData(merged)
+    if (progressive) {
+      publicStore.setDataProgressively(merged)
+    } else {
+      publicStore.setData(merged)
+    }
   }
 
   applyConfigFromPublicData(merged)
@@ -86,7 +90,7 @@ export function applyPublicData(data: PublicData, version = getDataVersion(data)
   return merged
 }
 
-export async function refreshPublicData(): Promise<PublicData | null> {
+export async function refreshPublicData(progressive = false): Promise<PublicData | null> {
   const config = get(configStore).data
   if (config?.public_mode === false && !isLoggedIn()) {
     publicStore.reset()
@@ -112,7 +116,7 @@ export async function refreshPublicData(): Promise<PublicData | null> {
       }
     }
 
-    const data = applyPublicData(await api.public.getData(false))
+    const data = applyPublicData(await api.public.getData(false), undefined, progressive)
     if (!isLoggedIn()) {
       await writeCachedPublicData(data, currentDataVersion)
     }
@@ -126,7 +130,7 @@ export async function refreshPublicData(): Promise<PublicData | null> {
 
       if (isLoggedIn()) {
         try {
-          const data = applyPublicData(await api.public.getData(true))
+          const data = applyPublicData(await api.public.getData(true), undefined, progressive)
           configStore.setData({
             site_title: data.settings.site_title || forbiddenConfig.site_title,
             public_mode: false,
