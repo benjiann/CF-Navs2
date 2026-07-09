@@ -55,12 +55,22 @@
 
   @media (max-width: 720px) {
     .hero-search {
+      gap: 0.75rem;
       margin-top: 3.5rem;
+      padding: 0 0.25rem;
     }
 
     .search-card {
-      margin-top: 4rem;
-      border-radius: 1.2rem;
+      margin-top: 0.75rem;
+      padding: 0.6rem;
+      border-radius: 1rem;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .search-card {
+      padding: 0.55rem;
+      border-radius: 0.95rem;
     }
   }
 </style>

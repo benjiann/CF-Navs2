@@ -140,7 +140,62 @@
 
   @media (max-width: 720px) {
     .search-box {
-      grid-template-columns: 1fr;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+
+    .search-box:has(.search-select) {
+      grid-template-columns: none;
+    }
+
+    .search-input,
+    .search-select,
+    .search-button {
+      height: 2.5rem;
+      border-radius: 0.7rem;
+      font-size: 0.9rem;
+    }
+
+    .search-input {
+      flex: 1 0 100%;
+      min-width: 0;
+    }
+
+    .search-select {
+      flex: 0 1 clamp(7.5rem, 38vw, 10rem);
+      min-width: 0;
+      padding: 0 1.75rem 0 0.65rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .search-button {
+      flex: 0 0 4.15rem;
+      padding: 0 0.55rem;
+      font-size: 0.88rem;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .search-box {
+      gap: 0.45rem;
+    }
+
+    .search-input,
+    .search-select,
+    .search-button {
+      height: 2.4rem;
+      font-size: 0.86rem;
+    }
+
+    .search-select {
+      flex-basis: clamp(6.75rem, 40vw, 9rem);
+    }
+
+    .search-button {
+      flex-basis: 3.8rem;
     }
   }
 </style>
