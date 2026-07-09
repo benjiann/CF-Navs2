@@ -150,6 +150,7 @@
 
   <button class="search-button" type="submit" disabled={!currentEngine || !query.trim()}>
     <span class="search-button-text">搜索</span>
+    <span class="search-button-mobile-text" aria-hidden="true">搜</span>
   </button>
 </form>
 
@@ -205,6 +206,10 @@
   .search-button:disabled {
     cursor: not-allowed;
     opacity: 0.55;
+  }
+
+  .search-button-mobile-text {
+    display: none;
   }
 
   .engine-icon-button,
@@ -396,9 +401,21 @@
     }
 
     .search-button-text {
-      display: inline-block;
-      transform: scale(0.92);
-      transform-origin: center;
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .search-button-mobile-text {
+      display: inline;
+      font-size: 0.86rem;
+      font-weight: 700;
     }
   }
 
