@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte'
   import type { SearchEngineSetting } from '../../shared/types'
 
   export let searchEngine: SearchEngineSetting | null = null
@@ -6,6 +7,7 @@
   export let showEngineSelector = true
 
   let selectedName = ''
+  let engineMenuOpen = false
 
   $: engines = searchEngine?.engines ?? []
 
@@ -17,6 +19,43 @@
 
   $: currentEngine = engines.find((engine) => engine.name === selectedName) ?? null
 
+  $: if (!showEngineSelector || engines.length <= 1) {
+    engineMenuOpen = false
+  }
+
+  function isIconImage(icon: string | null | undefined): boolean {
+    return /^(https?:\/\/|data:image\/)/i.test(icon?.trim() ?? '')
+  }
+
+  function getEngineIconText(name: string): string {
+    return name.trim().slice(0, 1).toUpperCase() || '?'
+  }
+
+  function toggleEngineMenu() {
+    if (engines.length <= 1) return
+    engineMenuOpen = !engineMenuOpen
+  }
+
+  function selectEngine(name: string) {
+    selectedName = name
+    engineMenuOpen = false
+  }
+
+  function handleKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      engineMenuOpen = false
+    }
+  }
+
+  function handlePickerFocusOut(event: FocusEvent) {
+    const nextTarget = event.relatedTarget
+    if (nextTarget instanceof Node && event.currentTarget instanceof Node && event.currentTarget.contains(nextTarget)) {
+      return
+    }
+
+    engineMenuOpen = false
+  }
+
   function handleSubmit() {
     const keyword = query.trim()
 
@@ -27,9 +66,60 @@
     const targetUrl = currentEngine.url_template.replaceAll('{q}', encodeURIComponent(keyword))
     window.open(targetUrl, '_blank', 'noopener,noreferrer')
   }
+
+  onDestroy(() => {
+    engineMenuOpen = false
+  })
 </script>
 
-<form class="search-box" on:submit|preventDefault={handleSubmit}>
+<form class="search-box" class:has-engine-selector={showEngineSelector} on:submit|preventDefault={handleSubmit}>
+  {#if showEngineSelector}
+    <div class="engine-picker" on:focusout={handlePickerFocusOut}>
+      <button
+        type="button"
+        class="engine-icon-button"
+        aria-label={currentEngine ? `当前搜索引擎：${currentEngine.name}` : '选择搜索引擎'}
+        aria-haspopup="listbox"
+        aria-expanded={engineMenuOpen}
+        disabled={engines.length === 0}
+        title={currentEngine ? `搜索引擎：${currentEngine.name}` : '选择搜索引擎'}
+        on:click={toggleEngineMenu}
+        on:keydown={handleKeydown}
+      >
+        {#if currentEngine && isIconImage(currentEngine.icon)}
+          <img src={currentEngine.icon} alt="" loading="lazy" decoding="async" />
+        {:else}
+          <span>{getEngineIconText(currentEngine?.name ?? '')}</span>
+        {/if}
+      </button>
+
+      {#if engineMenuOpen}
+        <div class="engine-menu" role="listbox" aria-label="选择搜索引擎">
+          {#each engines as engine}
+            <button
+              type="button"
+              class="engine-menu-item"
+              class:is-selected={engine.name === selectedName}
+              role="option"
+              aria-selected={engine.name === selectedName}
+              on:click={() => selectEngine(engine.name)}
+              on:keydown={handleKeydown}
+            >
+              <span class="engine-menu-icon">
+                {#if isIconImage(engine.icon)}
+                  <img src={engine.icon} alt="" loading="lazy" decoding="async" />
+                {:else}
+                  {getEngineIconText(engine.name)}
+                {/if}
+              </span>
+              <span class="engine-menu-name">{engine.name}</span>
+            </button>
+          {/each}
+        </div>
+      {/if}
+    </div>
+  {/if}
+
   <label class="sr-only" for="search-query">搜索关键词</label>
   <input
     id="search-query"
@@ -59,7 +149,7 @@
   {/if}
 
   <button class="search-button" type="submit" disabled={!currentEngine || !query.trim()}>
-    搜索
+    <span class="search-button-text">搜索</span>
   </button>
 </form>
 
@@ -67,7 +157,7 @@
   .search-box {
     position: relative;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto 80px;
+    grid-template-columns: minmax(0, 1fr) 80px;
     gap: 0.6rem;
     align-items: center;
   }
@@ -84,6 +174,10 @@
     border: 1px solid rgba(148, 163, 184, 0.28);
     font: inherit;
     font-size: 0.95rem;
+  }
+
+  .engine-picker {
+    display: none;
   }
 
   .search-input,
@@ -113,9 +207,101 @@
     opacity: 0.55;
   }
 
+  .engine-icon-button,
+  .engine-menu-item {
+    font: inherit;
+  }
+
+  .engine-icon-button {
+    width: 100%;
+    height: 100%;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.82);
+    color: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  .engine-icon-button img,
+  .engine-menu-icon img {
+    width: 1.25rem;
+    height: 1.25rem;
+    object-fit: contain;
+  }
+
+  .engine-icon-button span,
+  .engine-menu-icon {
+    font-size: 0.86rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .engine-menu {
+    position: absolute;
+    top: calc(100% + 0.45rem);
+    left: 0;
+    z-index: 60;
+    min-width: 10.5rem;
+    max-width: min(16rem, calc(100vw - 2rem));
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.35rem;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 0.85rem;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.16);
+    backdrop-filter: blur(12px);
+  }
+
+  .engine-menu-item {
+    width: 100%;
+    border: 0;
+    border-radius: 0.65rem;
+    background: transparent;
+    color: #0f172a;
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: 1.7rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.55rem;
+    text-align: left;
+  }
+
+  .engine-menu-item:hover,
+  .engine-menu-item.is-selected {
+    background: rgba(37, 99, 235, 0.1);
+  }
+
+  .engine-menu-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.7rem;
+    height: 1.7rem;
+    border-radius: 0.5rem;
+    background: rgba(226, 232, 240, 0.74);
+    color: #1e293b;
+  }
+
+  .engine-menu-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
   /* 暗色主题 */
   :global([data-theme='dark']) .search-input,
-  :global([data-theme='dark']) .search-select {
+  :global([data-theme='dark']) .search-select,
+  :global([data-theme='dark']) .engine-icon-button {
     background: rgba(15, 23, 42, 0.6);
     border-color: rgba(148, 163, 184, 0.28);
     color: #e5eefb;
@@ -124,6 +310,26 @@
 
   :global([data-theme='dark']) .search-input::placeholder {
     color: rgba(148, 163, 184, 0.7);
+  }
+
+  :global([data-theme='dark']) .engine-menu {
+    border-color: rgba(148, 163, 184, 0.24);
+    background: rgba(15, 23, 42, 0.96);
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.26);
+  }
+
+  :global([data-theme='dark']) .engine-menu-item {
+    color: #e5eefb;
+  }
+
+  :global([data-theme='dark']) .engine-menu-item:hover,
+  :global([data-theme='dark']) .engine-menu-item.is-selected {
+    background: rgba(125, 211, 252, 0.14);
+  }
+
+  :global([data-theme='dark']) .engine-menu-icon {
+    background: rgba(30, 41, 59, 0.86);
+    color: #bae6fd;
   }
 
   .sr-only {
@@ -140,41 +346,59 @@
 
   @media (max-width: 720px) {
     .search-box {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      gap: 0.5rem;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 2.5rem;
+      gap: 0.45rem;
+    }
+
+    .search-box.has-engine-selector {
+      grid-template-columns: 2.5rem minmax(0, 1fr) 2.5rem;
     }
 
     .search-box:has(.search-select) {
-      grid-template-columns: none;
+      grid-template-columns: 2.5rem minmax(0, 1fr) 2.5rem;
     }
 
     .search-input,
-    .search-select,
     .search-button {
       height: 2.5rem;
       border-radius: 0.7rem;
       font-size: 0.9rem;
     }
 
-    .search-input {
-      flex: 1 0 100%;
-      min-width: 0;
+    .engine-picker {
+      position: relative;
+      display: block;
+      width: 2.5rem;
+      height: 2.5rem;
     }
 
     .search-select {
-      flex: 0 1 clamp(7.5rem, 38vw, 10rem);
+      display: none;
+    }
+
+    .search-input {
       min-width: 0;
-      padding: 0 1.75rem 0 0.65rem;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
     .search-button {
-      flex: 0 0 4.15rem;
-      padding: 0 0.55rem;
-      font-size: 0.88rem;
+      width: 2.5rem;
+      padding: 0;
+      font-size: 0.82rem;
+    }
+
+    .engine-icon-button {
+      border-radius: 0.7rem;
+    }
+
+    .engine-menu {
+      min-width: 9.5rem;
+    }
+
+    .search-button-text {
+      display: inline-block;
+      transform: scale(0.92);
+      transform-origin: center;
     }
   }
 
@@ -183,19 +407,29 @@
       gap: 0.45rem;
     }
 
+    .search-box,
+    .search-box.has-engine-selector,
+    .search-box:has(.search-select) {
+      grid-template-columns: 2.4rem minmax(0, 1fr) 2.4rem;
+    }
+
+    .search-box:not(.has-engine-selector) {
+      grid-template-columns: minmax(0, 1fr) 2.4rem;
+    }
+
     .search-input,
-    .search-select,
     .search-button {
       height: 2.4rem;
       font-size: 0.86rem;
     }
 
-    .search-select {
-      flex-basis: clamp(6.75rem, 40vw, 9rem);
+    .engine-picker {
+      width: 2.4rem;
+      height: 2.4rem;
     }
 
     .search-button {
-      flex-basis: 3.8rem;
+      width: 2.4rem;
     }
   }
 </style>
