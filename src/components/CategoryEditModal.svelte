@@ -1,5 +1,23 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte'
+  import type { IconifyCandidate as IconifySearchCandidate } from '../../shared/types'
+  import { getErrorMessage, iconifyApi } from '../lib/api'
   import type { CategoryFormValue } from '../lib/adminTypes'
+  import {
+    createBookmarkIconifySearchState,
+    deriveBookmarkIconifyInput,
+    initializeBookmarkIconifySelection,
+    isBookmarkIconifySelected,
+    resolveBookmarkIconifySearchError,
+    resolveBookmarkIconifySearchSuccess,
+    scheduleBookmarkIconifyCandidateSearch,
+    selectBookmarkIconifyIcon,
+    selectBookmarkIconifySearchCandidate,
+    shouldResetBookmarkIconifyConfirmation,
+    type BookmarkIconifySearchState,
+  } from '../lib/bookmarkIconifyController'
+  import { iconifyIcon, iconifyNameFromUrl } from '../lib/icons'
+  import IconifySelector from './IconifySelector.svelte'
 
   const emptyForm: CategoryFormValue = {
     title: '',
@@ -17,15 +35,85 @@
 
   let form: CategoryFormValue = { ...emptyForm }
   let formKey = ''
+  let iconifyName = ''
+  let iconifyUseConfirmed = false
+  let confirmedIconifyName = ''
+  let iconifySearchState: BookmarkIconifySearchState = createBookmarkIconifySearchState()
+  let iconifySearchTimer: ReturnType<typeof setTimeout> | null = null
+  let iconifyError = ''
 
   $: nextKey = JSON.stringify({ open, mode, value })
   $: if (nextKey !== formKey) {
     formKey = nextKey
+    iconifyError = ''
     form = {
       ...emptyForm,
       ...(value ?? {}),
       title: value?.title ?? '',
       icon: value?.icon ?? '',
+    }
+    const iconifySelection = initializeBookmarkIconifySelection({
+      mode,
+      iconSource: iconifyNameFromUrl(form.icon) ? 'iconify' : '',
+      icon: form.icon,
+    })
+    iconifyName = iconifySelection.iconifyName
+    iconifyUseConfirmed = iconifySelection.iconifyUseConfirmed
+    confirmedIconifyName = iconifySelection.confirmedIconifyName
+    iconifySearchState = createBookmarkIconifySearchState()
+    clearIconifySearchTimer()
+  }
+
+  $: iconifyInput = deriveBookmarkIconifyInput(iconifyName)
+  $: normalizedIconifyName = iconifyInput.normalizedIconifyName
+  $: iconifyPreviewUrl = iconifyInput.iconifyPreviewUrl
+  $: iconifySelected = isBookmarkIconifySelected({
+    iconifyUseConfirmed,
+    normalizedIconifyName,
+    confirmedIconifyName,
+  })
+  $: scheduleIconifyCandidateSearch(open, iconifyName)
+  $: if (shouldResetBookmarkIconifyConfirmation({
+    iconifyUseConfirmed,
+    normalizedIconifyName,
+    confirmedIconifyName,
+  })) {
+    iconifyUseConfirmed = false
+  }
+
+  function clearIconifySearchTimer() {
+    if (iconifySearchTimer) {
+      clearTimeout(iconifySearchTimer)
+      iconifySearchTimer = null
+    }
+  }
+
+  function scheduleIconifyCandidateSearch(enabled: boolean, value: string) {
+    const result = scheduleBookmarkIconifyCandidateSearch(iconifySearchState, { enabled, value })
+    if (!result.changed) return
+
+    clearIconifySearchTimer()
+    iconifySearchState = result.state
+    if (!result.task) return
+
+    const { query, requestId, delayMs } = result.task
+    iconifySearchTimer = setTimeout(() => {
+      void loadIconifyCandidates(query, requestId)
+    }, delayMs)
+  }
+
+  async function loadIconifyCandidates(query: string, requestId: number) {
+    try {
+      const result = await iconifyApi.search(query)
+      iconifySearchState = resolveBookmarkIconifySearchSuccess(iconifySearchState, {
+        requestId,
+        candidates: result.candidates,
+      })
+    } catch (searchError) {
+      iconifySearchState = resolveBookmarkIconifySearchError(iconifySearchState, {
+        requestId,
+        error: getErrorMessage(searchError),
+      })
     }
   }
 
@@ -35,11 +123,56 @@
     window.open(`${base}/upload`, '_blank', 'noopener,noreferrer')
   }
 
+  function openIconifyLibrary() {
+    window.open('https://icon-sets.iconify.design/', '_blank', 'noopener,noreferrer')
+  }
+
+  function syncManualIconInput() {
+    const nextIconifyName = iconifyNameFromUrl(form.icon)
+    if (nextIconifyName) {
+      iconifyName = nextIconifyName
+      iconifyUseConfirmed = true
+      confirmedIconifyName = nextIconifyName
+      iconifyError = ''
+      return
+    }
+
+    iconifyName = ''
+    iconifyUseConfirmed = false
+    confirmedIconifyName = ''
+    iconifyError = ''
+    iconifySearchState = createBookmarkIconifySearchState()
+    clearIconifySearchTimer()
+  }
+
+  function selectIconifyIcon() {
+    const result = selectBookmarkIconifyIcon(iconifyName)
+    if (!result.ok) {
+      iconifyError = result.error
+      return
+    }
+
+    form.icon = result.icon
+    iconifyName = result.iconifyName
+    iconifyUseConfirmed = result.iconifyUseConfirmed
+    confirmedIconifyName = result.confirmedIconifyName
+    iconifyError = ''
+  }
+
+  function selectIconifySearchCandidate(candidate: IconifySearchCandidate) {
+    const result = selectBookmarkIconifySearchCandidate(candidate)
+    form.icon = result.icon
+    iconifyName = result.iconifyName
+    iconifyUseConfirmed = result.iconifyUseConfirmed
+    confirmedIconifyName = result.confirmedIconifyName
+    iconifyError = ''
+  }
+
   async function handleSubmit() {
     await onSubmit?.({
       ...form,
       title: form.title.trim(),
-      icon: form.icon.trim(),
+      icon: (iconifySelected ? iconifyIcon(iconifyName) : form.icon).trim(),
     })
   }
 
@@ -50,6 +183,10 @@
 
     onCancel?.()
   }
+
+  onDestroy(() => {
+    clearIconifySearchTimer()
+  })
 </script>
 
 {#if open}
@@ -72,7 +209,7 @@
         <label>
           <span>图标</span>
           <div class="icon-row">
-            <input bind:value={form.icon} type="text" placeholder="例如：🧰 或 icon-tools" />
+            <input bind:value={form.icon} type="text" placeholder="例如：🧰 或 icon-tools" on:input={syncManualIconInput} />
             {#if imageHostUrl}
               <button
                 type="button"
@@ -86,6 +223,22 @@
             {/if}
           </div>
         </label>
+
+        <IconifySelector
+          bind:iconifyName
+          {iconifyPreviewUrl}
+          {iconifySelected}
+          {iconifyUseConfirmed}
+          {confirmedIconifyName}
+          iconifySearchCandidates={iconifySearchState.candidates}
+          iconifySearchLoading={iconifySearchState.loading}
+          iconifySearchError={iconifySearchState.error}
+          candidateError={iconifyError}
+          {loading}
+          onOpenLibrary={openIconifyLibrary}
+          onSelectIcon={selectIconifyIcon}
+          onSelectCandidate={selectIconifySearchCandidate}
+        />
 
         {#if error}
           <p class="error-text">{error}</p>
@@ -123,6 +276,10 @@
   .modal-card {
     position: relative;
     width: min(100%, 480px);
+    max-height: calc(100vh - 40px);
+    max-height: calc(100dvh - 40px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     border-radius: 18px;
     background: #ffffff;
     box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);

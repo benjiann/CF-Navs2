@@ -9,6 +9,7 @@
     getAdminSortIds,
     reorderAdminSortDraft,
   } from '../../lib/adminListState'
+  import { createIconVersion } from '../../lib/bookmarkIconDisplay'
   import { sortableList, type SortHandler } from '../../lib/sortableList'
   import './adminListPanels.css'
 
@@ -68,6 +69,13 @@
       savingSort = false
     }
   }
+
+  function getCategoryIconUrl(category: AdminCategory): string {
+    const icon = category.icon?.trim()
+    if (!icon || (!/^https?:\/\//i.test(icon) && !icon.startsWith('data:image/'))) return ''
+
+    return `/api/category-icon/${category.id}?v=${createIconVersion(`${category.id}:${icon}:${category.title}`)}`
+  }
 </script>
 
 <div class="admin-list-view">
@@ -126,7 +134,13 @@
               {#if sortMode}
                 <span class="admin-drag-handle" aria-hidden="true">⋮⋮</span>
               {/if}
-              <span class="admin-icon-badge">{category.icon || '📁'}</span>
+              <span class="admin-icon-badge">
+                {#if getCategoryIconUrl(category)}
+                  <img src={getCategoryIconUrl(category)} alt="" loading="lazy" />
+                {:else}
+                  {category.icon || '📁'}
+                {/if}
+              </span>
               <div class="admin-compact-info">
                 <h3>{category.title}</h3>
                 <span class="admin-count-badge">{getAdminCategoryBookmarkCount(category, bookmarks)} 个书签</span>
@@ -283,6 +297,13 @@
   .admin-sm-button:disabled {
     cursor: not-allowed;
     opacity: 0.6;
+  }
+
+  .admin-icon-badge img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    display: block;
   }
 
   @media (max-width: 960px) {
