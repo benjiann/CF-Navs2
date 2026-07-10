@@ -9,5 +9,4 @@ wrangler.local.toml
 tmp/
 _archive/*
 !_archive/README.md
-docs/screenshots/
 docs/development/
