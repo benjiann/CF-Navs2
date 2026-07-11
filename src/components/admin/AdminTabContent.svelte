@@ -120,8 +120,8 @@
 
   .settings-panel-wrap {
     min-width: 0;
-    width: min(100%, 1320px);
-    margin: 0 auto 24px;
+    width: 100%;
+    margin: 0 0 24px;
   }
 
   .panel {
