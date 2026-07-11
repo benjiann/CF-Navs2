@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { consumeErrorReportQuota } from '../../worker/lib/errorReportRateLimit'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { clearErrorReportRateLimitMemory, consumeErrorReportQuota } from '../../worker/lib/errorReportRateLimit'
 
 class MemoryKv {
   items = new Map<string, string>()
@@ -8,6 +8,7 @@ class MemoryKv {
 }
 
 describe('error report rate limit', () => {
+  beforeEach(() => clearErrorReportRateLimitMemory())
   it('allows twelve requests per IP and resets after the window', async () => {
     const kv = new MemoryKv()
     const env = { SESSION: kv } as never

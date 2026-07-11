@@ -194,7 +194,7 @@
 ## 阶段 1 实现说明
 
 - 新增 `worker/lib/errorReportValidation.ts`：纯函数负责 body、批次和字段边界以及输入归一化。
-- 新增 `worker/lib/errorReportRateLimit.ts`：独立 KV 前缀按 IP 控制每分钟最多 12 次有效上报。
+- 新增 `worker/lib/errorReportRateLimit.ts`：Worker isolate 内存即时计数，并以独立 KV 前缀保留跨冷启动兜底状态，按 IP 控制每分钟最多 12 次有效上报。单独使用 KV 会受最终一致性影响，因此不能作为连续请求的唯一计数器。
 - 路由先拒绝超大或无效请求，再消耗限流配额，避免为垃圾 payload 产生不必要 KV 写入。
 - 客户端同一错误指纹 60 秒内只入队一次，每分钟最多发送 6 个批次。
 - 正常页面没有错误时仍不会调用 `/api/error-report`。
