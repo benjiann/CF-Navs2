@@ -138,7 +138,7 @@
   <tr>
     <td align="center" colspan="2">
       <strong>后台备份</strong><br>
-      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-admin-backup.jpg" alt="后台备份" width="420">
+      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-backup.jpg" alt="后台备份" width="420">
     </td>
   </tr>
 </table>
