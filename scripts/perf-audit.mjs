@@ -358,7 +358,9 @@ async function runAdminSearch() {
       bookmarkTab?.click()
       await delay(300)
 
-      const input = document.querySelector('.bookmark-search-bar input')
+      const input =
+        document.querySelector('[data-testid="admin-bookmark-search"]') ||
+        document.querySelector('.admin-bookmark-search-bar input')
       if (!input) return { error: 'admin search input not found' }
 
       const mutations = { count: 0 }
