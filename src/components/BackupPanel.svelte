@@ -45,27 +45,42 @@
     <p class="backup-alert ok">{backupMessage}</p>
   {/if}
 
-  <div class="backup-actions">
-    <label class="import-source-field" for="import-source">
-      <span>导入来源</span>
-      <select id="import-source" bind:value={importSource} disabled={!isAuthenticated || importing}>
-        <option value="cf-navs">CF-Navs 备份</option>
-        <option value="sunpanel">SunPanel 导出</option>
-      </select>
-    </label>
-    <button type="button" class="primary-button" on:click={() => onExportData?.()} disabled={!isAuthenticated}>
-      导出备份
-    </button>
-    <button type="button" class="ghost-button" on:click={triggerImport} disabled={!isAuthenticated || importing}>
-      {#if importing}导入中...{:else}导入备份{/if}
-    </button>
-    <input
-      bind:this={importInput}
-      class="import-input"
-      type="file"
-      accept="application/json,.json,.sun-panel.json,.sunpanel.json"
-      on:change={handleImportChange}
-    />
+  <div class="backup-operations">
+    <section class="backup-operation" aria-labelledby="export-backup-title">
+      <div class="backup-operation-copy">
+        <h3 id="export-backup-title">导出当前数据</h3>
+        <p>将当前分类、书签与站点设置下载为 JSON 备份文件。</p>
+      </div>
+      <button type="button" class="primary-button" on:click={() => onExportData?.()} disabled={!isAuthenticated}>
+        导出备份
+      </button>
+    </section>
+
+    <section class="backup-operation" aria-labelledby="import-backup-title">
+      <div class="backup-operation-copy">
+        <h3 id="import-backup-title">导入备份数据</h3>
+        <p>先选择备份来源，再选择对应的 JSON 文件进行覆盖导入。</p>
+      </div>
+      <div class="import-actions">
+        <label class="import-source-field" for="import-source">
+          <span>导入来源</span>
+          <select id="import-source" bind:value={importSource} disabled={!isAuthenticated || importing}>
+            <option value="cf-navs">CF-Navs 备份</option>
+            <option value="sunpanel">SunPanel 导出</option>
+          </select>
+        </label>
+        <button type="button" class="ghost-button" on:click={triggerImport} disabled={!isAuthenticated || importing}>
+          {#if importing}导入中...{:else}选择文件并导入{/if}
+        </button>
+        <input
+          bind:this={importInput}
+          class="import-input"
+          type="file"
+          accept="application/json,.json,.sun-panel.json,.sunpanel.json"
+          on:change={handleImportChange}
+        />
+      </div>
+    </section>
   </div>
 </section>
 
@@ -109,11 +124,44 @@
     margin-bottom: 16px;
   }
 
-  .backup-actions {
-    display: flex;
-    flex-wrap: wrap;
+  .backup-operations {
+    display: grid;
     gap: 12px;
+  }
+
+  .backup-operation {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 16px;
+    border: 1px solid var(--admin-border);
+    border-radius: 14px;
+    background: var(--admin-control-bg);
+  }
+
+  .backup-operation-copy {
+    min-width: 0;
+  }
+
+  .backup-operation-copy h3 {
+    margin: 0 0 5px;
+    font-size: 15px;
+  }
+
+  .backup-operation-copy p {
+    color: var(--admin-muted);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .import-actions {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
     align-items: flex-end;
+    justify-content: flex-end;
+    gap: 10px;
   }
 
   .import-source-field {
@@ -192,5 +240,26 @@
   .ghost-button:disabled {
     cursor: not-allowed;
     opacity: 0.6;
+  }
+
+  @media (max-width: 760px) {
+    .backup-operation {
+      align-items: stretch;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .import-actions {
+      justify-content: flex-start;
+    }
+
+    .import-source-field {
+      flex: 1 1 180px;
+    }
+
+    .primary-button,
+    .ghost-button {
+      align-self: flex-start;
+    }
   }
 </style>
