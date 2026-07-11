@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '../../src/lib/api'
-import { classifyError, formatLoggableError, queueErrorForReport, initErrorReporting } from '../../src/lib/errorMonitor'
+import { classifyError, formatLoggableError, isDuplicateErrorReport, queueErrorForReport, initErrorReporting } from '../../src/lib/errorMonitor'
 
 describe('error monitor classification', () => {
   it('classifies ApiErrors by code', () => {
@@ -78,6 +78,13 @@ describe('error monitor classification', () => {
     // crashing.
     const entry = classifyError(new Error('test error'))
     expect(() => queueErrorForReport(entry)).not.toThrow()
+  })
+
+  it('deduplicates the same report fingerprint for one minute', () => {
+    const entry = classifyError(new Error('dedupe-test'))
+    expect(isDuplicateErrorReport(entry, 1000)).toBe(false)
+    expect(isDuplicateErrorReport(entry, 2000)).toBe(true)
+    expect(isDuplicateErrorReport(entry, 61_001)).toBe(false)
   })
 
   it('initErrorReporting is callable in Node (skips DOM-dependent handlers)', () => {

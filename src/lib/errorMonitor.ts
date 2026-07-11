@@ -82,12 +82,15 @@ export function formatLoggableError(entry: ClassifiedError): string {
 const REPORT_ENDPOINT = '/api/error-report'
 const MAX_BATCH_SIZE = 10
 const FLUSH_INTERVAL_MS = 10000
-const MAX_REPORTS_PER_MINUTE = 60
+const MAX_BATCHES_PER_MINUTE = 6
+const ERROR_DEDUPE_TTL_MS = 60_000
+const MAX_DEDUPE_ENTRIES = 100
 
 let _batch: ClassifiedError[] = []
 let _flushTimer: ReturnType<typeof setTimeout> | null = null
 let _reportCount = 0
 let _reportWindowStart = 0
+const _recentFingerprints = new Map<string, number>()
 
 function resetRateWindow(): void {
   const now = Date.now()
@@ -99,7 +102,24 @@ function resetRateWindow(): void {
 
 function rateLimitAllows(): boolean {
   resetRateWindow()
-  return _reportCount < MAX_REPORTS_PER_MINUTE
+  return _reportCount < MAX_BATCHES_PER_MINUTE
+}
+
+export function isDuplicateErrorReport(entry: ClassifiedError, now = Date.now()): boolean {
+  for (const [key, expiresAt] of _recentFingerprints) {
+    if (expiresAt <= now) _recentFingerprints.delete(key)
+  }
+
+  const key = `${entry.category}\u0000${entry.message}\u0000${entry.url ?? ''}\u0000${entry.line ?? ''}`
+  if ((_recentFingerprints.get(key) ?? 0) > now) return true
+
+  _recentFingerprints.set(key, now + ERROR_DEDUPE_TTL_MS)
+  while (_recentFingerprints.size > MAX_DEDUPE_ENTRIES) {
+    const oldest = _recentFingerprints.keys().next().value as string | undefined
+    if (!oldest) break
+    _recentFingerprints.delete(oldest)
+  }
+  return false
 }
 
 function flushBatch(): void {
@@ -132,7 +152,7 @@ function sendBatch(errors: ClassifiedError[]): void {
 }
 
 export function queueErrorForReport(entry: ClassifiedError): void {
-  if (!rateLimitAllows()) return
+  if (!rateLimitAllows() || isDuplicateErrorReport(entry)) return
   _batch.push(entry)
   if (_batch.length >= MAX_BATCH_SIZE) {
     flushBatch()
