@@ -121,8 +121,8 @@
 
   .bookmark-card-info .bookmark-description {
     font-size: 0.75rem;
-    color: var(--card-text-color, rgba(71, 85, 105, 0.92));
-    opacity: 0.72;
+    color: var(--card-text-color, #475569);
+    opacity: 0.88;
     margin: 0.25rem 0 0 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -154,6 +154,10 @@
 
   :global([data-theme='dark']) .bookmark-card-info:hover {
     border-color: rgba(125, 211, 252, 0.26);
+  }
+
+  :global([data-theme='dark']) .bookmark-card-info .bookmark-title {
+    color: var(--card-text-color, #e5eefb);
   }
 
   :global([data-theme='dark']) .bookmark-card-info .bookmark-description {

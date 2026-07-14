@@ -16,4 +16,18 @@ describe('bookmark card theme styles', () => {
     expect(source).toContain(":global([data-theme='dark']) .bookmark-icon-title")
     expect(source).toContain('color: var(--card-text-color, #e5eefb);')
   })
+
+  it('keeps information card titles readable in dark mode', () => {
+    const source = readFileSync('src/components/BookmarkCardInfo.svelte', 'utf8')
+
+    expect(source).toContain(":global([data-theme='dark']) .bookmark-card-info .bookmark-title")
+    expect(source).toContain('color: var(--card-text-color, #e5eefb);')
+  })
+
+  it('keeps light-mode bookmark descriptions above normal-text contrast', () => {
+    const source = readFileSync('src/components/BookmarkCardInfo.svelte', 'utf8')
+
+    expect(source).toContain('color: var(--card-text-color, #475569);')
+    expect(source).toContain('opacity: 0.88;')
+  })
 })
