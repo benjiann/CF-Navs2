@@ -100,7 +100,7 @@ function getRateLimitKey(ip: string): string {
 }
 
 async function ensureInstallRateLimitTable(db: D1Database): Promise<void> {
-  await db.exec(CREATE_RATE_LIMIT_TABLE_SQL)
+  await db.prepare(CREATE_RATE_LIMIT_TABLE_SQL).run()
 }
 
 async function readInstallFailures(db: D1Database, ip: string): Promise<LoginRateLimitState | null> {
