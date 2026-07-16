@@ -14,10 +14,10 @@ class FakeDb {
   rateLimits = new Map<string, { count: number; resetAt: number }>()
   schemaExists = false
   probeCount = 0
-  execCount = 0
+  executedSql: string[] = []
   failProbe = false
-  failExec = false
-  failBatchOnce = false
+  failSchemaBatch = false
+  failCredentialBatchOnce = false
   failClaimDeleteOnce = false
 
   constructor(initial: Record<string, unknown> = {}) {
@@ -62,6 +62,7 @@ class FakeDb {
         return { results: [] }
       },
       run: async () => {
+        this.executedSql.push(sql)
         const changes = this.apply({ sql, params })
         return { success: true, meta: { changes } }
       },
@@ -70,18 +71,21 @@ class FakeDb {
   }
 
   async exec(sql: string): Promise<D1ExecResult> {
-    this.execCount += 1
-    if (this.failExec && sql.includes('CREATE TABLE settings')) throw new Error('schema failed')
-    this.schemaExists = true
-    return { count: 1, duration: 1 }
+    this.executedSql.push(sql)
+    throw new Error('installer must not use D1 exec for formatted SQL')
   }
 
   async batch(statements: D1PreparedStatement[]): Promise<D1Result[]> {
-    if (this.failBatchOnce) {
-      this.failBatchOnce = false
+    const bound = statements as unknown as BoundStatement[]
+    const isSchemaBatch = bound.some(({ sql }) => sql.includes('CREATE TABLE settings'))
+    this.executedSql.push(...bound.map(({ sql }) => sql))
+    if (isSchemaBatch && this.failSchemaBatch) throw new Error('schema failed')
+    if (!isSchemaBatch && this.failCredentialBatchOnce) {
+      this.failCredentialBatchOnce = false
       throw new Error('batch failed')
     }
-    return (statements as unknown as BoundStatement[]).map((statement) => ({
+    if (isSchemaBatch) this.schemaExists = true
+    return bound.map((statement) => ({
       success: true,
       meta: { changes: this.apply(statement) },
     } as D1Result))
@@ -263,7 +267,8 @@ describe('installer routes', () => {
     const result = await request(createEnv(db, kv), '/install', postBody())
     const data = result.body.data as LoginResp
     expect(result.body.code).toBe(0)
-    expect(db.execCount).toBe(2)
+    expect(db.executedSql).toContain('CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT)')
+    expect(db.executedSql.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS install_rate_limits'))).toBe(true)
     expect(JSON.parse(db.settings.get('admin_username') ?? 'null')).toBe('admin')
     const passwordHash = JSON.parse(db.settings.get('admin_password') ?? 'null') as string
     await expect(verifyPassword('secure-password', passwordHash)).resolves.toBe(true)
@@ -292,19 +297,20 @@ describe('installer routes', () => {
     expect(JSON.parse(db.settings.get('installation_schema_version') ?? 'null')).toBe(1)
   })
 
-  it('does not write credentials when schema initialization fails', async () => {
-    const db = new FakeDb(); db.failExec = true
-    const result = await request(createEnv(db), '/install', postBody())
-    expect(result.body.code).toBe(1500)
+  it('does not write credentials or create a session when schema initialization fails', async () => {
+    const db = new FakeDb(); const kv = createKv(); db.failSchemaBatch = true
+    const result = await request(createEnv(db, kv), '/install', postBody())
+    expect(result.body).toEqual({ code: 1500, msg: 'installation failed', data: null })
     expect(db.settings.has('admin_username')).toBe(false)
     expect(db.settings.has('installation_schema_version')).toBe(false)
+    expect(kv.puts).toHaveLength(0)
   })
 
   it('recovers a transient claim after batch and cleanup failures', async () => {
     vi.useFakeTimers()
     try {
       const db = new FakeDb()
-      db.failBatchOnce = true
+      db.failCredentialBatchOnce = true
       db.failClaimDeleteOnce = true
       const env = createEnv(db)
 
@@ -345,6 +351,6 @@ describe('installer routes', () => {
     expect(repeated.body.code).toBe(1002)
     expect(JSON.parse(db.settings.get('admin_username') ?? 'null')).toBe('admin')
     expect(db.settings.get('admin_password')).toBe(storedPassword)
-    expect(db.execCount).toBe(2)
+    expect(db.executedSql.filter((sql) => sql.includes('CREATE TABLE settings'))).toHaveLength(1)
   })
 })
