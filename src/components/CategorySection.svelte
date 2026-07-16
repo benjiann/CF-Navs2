@@ -149,7 +149,7 @@
             {bookmark}
             style={cardStyle}
             iconSize={cardIconSize}
-            showDescription={cardShowDescription}
+            showDescription={resolveBookmarkDescriptionMode(bookmark, cardDescriptionMode) !== 'hidden'}
             descriptionMode={resolveBookmarkDescriptionMode(bookmark, cardDescriptionMode)}
             showIconTitle={cardIconShowTitle}
             width={cardWidth}

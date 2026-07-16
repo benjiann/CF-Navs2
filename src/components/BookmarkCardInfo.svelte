@@ -10,6 +10,7 @@
   export let cardLinkStyle = ''
   export let showDescription = true
   export let descriptionMode: DescriptionDisplayMode = showDescription ? 'always' : 'hidden'
+  export let tooltipText = ''
   export let iconUrl = ''
   export let iconText = ''
   export let infoIconSize = 60
@@ -32,10 +33,14 @@
 <a
   class="bookmark-card bookmark-card-info"
   class:sort-mode={sortMode}
+  class:is-description-hover={showDescription && descriptionMode === 'hover' && Boolean(bookmark.description)}
   href={bookmark.url}
   target={openInNewTab ? '_blank' : undefined}
   rel={openInNewTab ? 'noopener noreferrer' : undefined}
   style={cardLinkStyle}
+  title={showDescription && descriptionMode === 'hover' ? tooltipText : undefined}
+  aria-label={showDescription && descriptionMode === 'hover' ? tooltipText : undefined}
+  data-tooltip={showDescription && descriptionMode === 'hover' ? tooltipText : ''}
   on:click={handleLinkClick}
   on:contextmenu={handleContextMenu}
 >
@@ -53,8 +58,8 @@
 
   <div class="bookmark-text">
     <h3 class="bookmark-title">{bookmark.title}</h3>
-      {#if showDescription && descriptionMode !== 'hidden' && bookmark.description}
-      <p class="bookmark-description" class:is-hover-description={descriptionMode === 'hover'}>{bookmark.description}</p>
+      {#if showDescription && descriptionMode === 'always' && bookmark.description}
+      <p class="bookmark-description">{bookmark.description}</p>
     {/if}
   </div>
 </a>
@@ -99,6 +104,35 @@
     transform: translateY(-1px);
   }
 
+  .bookmark-card-info.is-description-hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 10px);
+    z-index: 20;
+    width: max-content;
+    max-width: 240px;
+    padding: 0.45rem 0.65rem;
+    border-radius: 0.55rem;
+    background: rgba(15, 23, 42, 0.95);
+    color: #ffffff;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    text-align: left;
+    white-space: pre-line;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.24);
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 4px);
+    transition: opacity 0.16s ease, transform 0.16s ease;
+  }
+
+  .bookmark-card-info.is-description-hover:hover::after,
+  .bookmark-card-info.is-description-hover:focus-visible::after {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
   .bookmark-card-info .bookmark-text {
     flex: 1;
     min-width: 0;
@@ -135,46 +169,10 @@
     transition: opacity 0.16s ease, transform 0.16s ease;
   }
 
-  .bookmark-card-info .bookmark-description.is-hover-description {
-    position: absolute;
-    left: 50%;
-    top: calc(100% + 8px);
-    z-index: 20;
-    width: max-content;
-    max-width: min(320px, calc(100vw - 32px));
-    min-height: 0;
-    padding: 0.55rem 0.7rem;
-    border: 1px solid rgba(148, 163, 184, 0.3);
-    border-radius: 0.7rem;
-    background: rgb(var(--card-bg-rgb, 255 255 255) / 0.96);
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
-    white-space: normal;
-    text-align: left;
-    visibility: hidden;
-    opacity: 0;
-    transform: translate(-50%, -4px);
-    pointer-events: none;
-  }
-
-  .bookmark-card-info:hover .bookmark-description.is-hover-description,
-  .bookmark-card-info:focus-visible .bookmark-description.is-hover-description {
-    visibility: visible;
-    opacity: 0.88;
-    transform: translate(-50%, 0);
-  }
-
-  @media (hover: none) {
-    .bookmark-card-info .bookmark-description.is-hover-description {
-      visibility: hidden;
-      opacity: 0;
-      pointer-events: none;
-    }
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .bookmark-card-info .bookmark-description {
+    .bookmark-card-info.is-description-hover::after {
       transition: none;
-      transform: none;
+      transform: translate(-50%, 4px);
     }
   }
 
@@ -213,9 +211,4 @@
     opacity: 0.92;
   }
 
-  :global([data-theme='dark']) .bookmark-card-info .bookmark-description.is-hover-description {
-    background: rgb(15 23 42 / 0.96);
-    border-color: rgba(148, 163, 184, 0.34);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.34);
-  }
 </style>

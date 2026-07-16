@@ -273,6 +273,7 @@
       {cardLinkStyle}
       {showDescription}
       {descriptionMode}
+      {tooltipText}
       iconUrl={hasRenderableIcon ? iconUrl : ''}
       {iconText}
       {infoIconSize}
