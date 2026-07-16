@@ -276,7 +276,7 @@ export function prepareBrowserBookmarkHtml(text: string): PreparedImport {
   }
 
   const tokens = text.match(/<\/?(?:DL|H3|A|DD|DT)\b[^>]*>|[^<]+/gi) ?? []
-  type DlContext = { topCategoryTitle: string | null }
+  type DlContext = { categoryPath: string[] }
   const dlStack: DlContext[] = []
   let pendingHeading = ''
   let captureHeading = false
@@ -297,10 +297,10 @@ export function prepareBrowserBookmarkHtml(text: string): PreparedImport {
     if (/^<\/H3/i.test(token)) { captureHeading = false; pendingHeading = decode(headingText.replace(/<[^>]+>/g, '')).trim(); continue }
     if (/^<DL\b/i.test(token)) {
       const parent = dlStack[dlStack.length - 1]
-      const topCategoryTitle = pendingHeading
-        ? (parent?.topCategoryTitle ?? pendingHeading)
-        : (parent?.topCategoryTitle ?? null)
-      dlStack.push({ topCategoryTitle })
+      const categoryPath = pendingHeading
+        ? [...(parent?.categoryPath ?? []), pendingHeading]
+        : [...(parent?.categoryPath ?? [])]
+      dlStack.push({ categoryPath })
       pendingHeading = ''
       continue
     }
@@ -308,7 +308,8 @@ export function prepareBrowserBookmarkHtml(text: string): PreparedImport {
     if (/^<A\b/i.test(token)) { captureLink = true; linkTag = token; linkText = ''; captureDescription = false; continue }
     if (/^<\/A/i.test(token)) {
       captureLink = false
-      parseLink(linkTag, linkText, dlStack[dlStack.length - 1]?.topCategoryTitle ?? '浏览器书签')
+      const categoryPath = dlStack[dlStack.length - 1]?.categoryPath ?? []
+      parseLink(linkTag, linkText, categoryPath.join(' / ') || '浏览器书签')
       continue
     }
     if (/^<DD\b/i.test(token)) { captureDescription = true; descriptionText = ''; continue }

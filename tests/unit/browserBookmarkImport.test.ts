@@ -11,10 +11,10 @@ const html = `<!DOCTYPE NETSCAPE-Bookmark-file-1><DL><p>
 </DL><p>`
 
 describe('browser bookmark import', () => {
-  it('detects HTML, folds nested folders and filters protocols', () => {
+  it('detects HTML, preserves nested folders and filters protocols', () => {
     expect(detectImportSource(html, 'bookmarks.html')).toBe('browser-html')
     const result = prepareBrowserBookmarkHtml(html)
-    expect(result.categories).toBe(1)
+    expect(result.categories).toBe(2)
     expect(result.bookmarks).toBe(2)
     expect(result.skipped).toBe(1)
     expect(result.payload.bookmarks[0].description).toBe('Example description')
@@ -22,7 +22,7 @@ describe('browser bookmark import', () => {
     expect(result.payload.bookmarks[0].created_at).toBe(1700000000000)
   })
 
-  it('uses root H3 folders as categories and folds their descendants', () => {
+  it('uses every H3 folder as a path-qualified category', () => {
     const exportedHtml = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
 <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
 <TITLE>Bookmarks</TITLE>
@@ -39,8 +39,12 @@ describe('browser bookmark import', () => {
 </DL><p>`
 
     const result = prepareBrowserBookmarkHtml(exportedHtml)
-    expect(result.payload.categories.map(category => category.title)).toEqual(['Bookmarks Bar', 'Other Bookmarks'])
-    expect(result.payload.bookmarks.map(bookmark => bookmark.category_id)).toEqual([1, 1, 2])
+    expect(result.payload.categories.map(category => category.title)).toEqual([
+      'Bookmarks Bar',
+      'Bookmarks Bar / Nested Folder',
+      'Other Bookmarks',
+    ])
+    expect(result.payload.bookmarks.map(bookmark => bookmark.category_id)).toEqual([1, 2, 3])
   })
 
   it('uses the fallback category only for links directly in the root list', () => {

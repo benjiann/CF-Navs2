@@ -68,7 +68,7 @@ https://api.iconify.design/{set}/{name}.svg
 
 ## 浏览器书签导入
 
-标准 Netscape Bookmark HTML 在浏览器内转换为共享 `ImportReq`。只导入 HTTP(S) 链接，顶层文件夹映射为分类，子文件夹书签并入顶层分类；合并模式由 Worker 生成完整目标数据后复用覆盖式事务重建，因而不会留下半次导入状态。
+标准 Netscape Bookmark HTML 在浏览器内转换为共享 `ImportReq`。只导入 HTTP(S) 链接，每一级 H3 文件夹映射为独立分类，嵌套分类使用“父级 / 子级”完整路径命名；合并模式由 Worker 生成完整目标数据后复用覆盖式事务重建，因而不会留下半次导入状态。
 
 ## 首页数据读取
 
