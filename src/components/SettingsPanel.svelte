@@ -99,14 +99,13 @@
       <p class="panel-eyebrow">设置</p>
       <h2>站点设置</h2>
       <p class="panel-desc">按功能区管理站点信息、外观、布局与账号。切换功能区不会丢失未保存内容，完成后点击底部「保存设置」。</p>
+      <div class="form-footer form-footer-header">
+        <p class="helper-text">
+          {#if saving}正在保存设置，请稍候...{:else if !hasTitle}请先填写站点标题。{:else if !backgroundValid}请完善背景设置。{:else if !enginesValid}请完善搜索引擎配置。{:else if !contentLayoutValid}请完善内容区布局配置。{:else if isDirty}检测到未保存的更改。{:else}当前配置已是最新状态。{/if}
+        </p>
+        <button type="submit" class="floating-save-btn" form="settings-form" disabled={!canSave}>{#if saving}保存中...{:else}保存设置{/if}</button>
+      </div>
     </div>
-  </div>
-
-  <div class="form-footer form-footer-header">
-    <p class="helper-text">
-      {#if saving}正在保存设置，请稍候...{:else if !hasTitle}请先填写站点标题。{:else if !backgroundValid}请完善背景设置。{:else if !enginesValid}请完善搜索引擎配置。{:else if !contentLayoutValid}请完善内容区布局配置。{:else if isDirty}检测到未保存的更改。{:else}当前配置已是最新状态。{/if}
-    </p>
-    <button type="submit" class="floating-save-btn" form="settings-form" disabled={!canSave}>{#if saving}保存中...{:else}保存设置{/if}</button>
   </div>
 
   {#if error}
@@ -418,7 +417,7 @@
     padding: 10px 12px;
   }
 
-  .form-footer-header { margin: 0 24px 4px; }
+  .form-footer-header { margin: 14px 0 0; }
 
   .helper-text {
     font-size: 13px;
