@@ -46,6 +46,15 @@ export type DescriptionDisplayMode = 'always' | 'hover' | 'hidden'
 
 export type ThemeMode = 'light' | 'dark' | 'auto'
 export const BUILTIN_BACKGROUND_PRESET_IDS = [
+  'paper-sage',
+  'paper-clay',
+  'paper-wheat',
+  'paper-slate',
+  'paper-pine',
+  'paper-sakura',
+  'paper-lavender',
+  'paper-indigo',
+  'paper-amber',
   'clear-teal',
   'mist-slate',
   'coral-sky',

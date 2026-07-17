@@ -176,4 +176,18 @@
     opacity: 0.92;
   }
 
+  :global(html[data-background-preset^='paper-']) .bookmark-card-info {
+    border-color: color-mix(in srgb, var(--home-accent-color) 24%, transparent);
+    background: rgb(var(--card-bg-rgb));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 0 8px 22px rgba(75, 83, 70, 0.08);
+  }
+
+  :global(html[data-theme='dark'][data-background-preset^='paper-']) .bookmark-card-info {
+    border-color: color-mix(in srgb, var(--home-accent-color) 24%, transparent);
+    background: rgb(var(--card-bg-rgb));
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+  }
+
 </style>

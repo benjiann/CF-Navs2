@@ -1,6 +1,7 @@
 import type { AdminData, Bookmark, Category, PublicBookmark, PublicData, PublicSettings, Settings } from '../../shared/types'
 import { toPublicSettings } from '../../shared/settings'
 import { colorToRgbString } from './color'
+import { gradientPresets } from './themePresets'
 
 export { toPublicSettings } from '../../shared/settings'
 
@@ -223,7 +224,13 @@ export function buildHomeBackground(settings: PublicSettings | null, theme: 'lig
   }
   const backgroundFilter = blur > 0 ? `blur(${blur}px)` : 'none'
   const backgroundTransform = blur > 0 ? 'scale(1.06)' : 'none'
-  const cardColor = settings.card_background_color?.trim() || '#ffffff'
+  const activePreset = gradientPresets.find((preset) => preset.id === settings.background_preset_id)
+  const cardColor = activePreset?.surface === 'flat' && theme === 'dark'
+    ? activePreset.darkCardBackgroundColor
+    : settings.card_background_color?.trim() || '#ffffff'
+  const accentColor = activePreset
+    ? (theme === 'dark' ? activePreset.darkAccentColor : activePreset.accentColor)
+    : (theme === 'dark' ? '#7dd3fc' : '#2563eb')
   const cardOpacity = typeof settings.card_background_opacity === 'number'
     ? Math.min(1, Math.max(0, settings.card_background_opacity))
     : 0.9
@@ -238,5 +245,6 @@ export function buildHomeBackground(settings: PublicSettings | null, theme: 'lig
     `--home-background-mask-color: ${maskColor};`,
     `--card-bg-rgb: ${cardRgb};`,
     `--card-bg-opacity: ${cardOpacity};`,
+    `--theme-accent-color: ${accentColor};`,
   ].join(' ')
 }

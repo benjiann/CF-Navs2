@@ -427,7 +427,7 @@
     --home-stat-chip-bg: rgba(255, 255, 255, 0.34);
     --home-stat-border: rgba(148, 163, 184, 0.24);
     --home-stat-shadow: 0 3px 10px rgba(15, 23, 42, 0.06);
-    --home-accent-color: #2563eb;
+    --home-accent-color: var(--theme-accent-color, #2563eb);
     color: var(--home-text-color);
     isolation: isolate;
   }
@@ -468,7 +468,7 @@
     --home-stat-chip-bg: rgba(15, 23, 42, 0.32);
     --home-stat-border: rgba(148, 163, 184, 0.22);
     --home-stat-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
-    --home-accent-color: #7dd3fc;
+    --home-accent-color: var(--theme-accent-color, #7dd3fc);
     color: var(--home-text-color);
   }
 

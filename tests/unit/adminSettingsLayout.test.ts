@@ -29,7 +29,7 @@ describe('admin settings layout', () => {
     expect(source).toContain("disabled={saving || form.navigation.position !== 'left'}")
   })
 
-  it('orders settings sections and exposes anchors for the section nav', () => {
+  it('groups settings sections behind a secondary settings menu', () => {
     const panel = readFileSync('src/components/SettingsPanel.svelte', 'utf8')
 
     const sectionOrder = [
@@ -44,10 +44,11 @@ describe('admin settings layout', () => {
     ]
     const positions = sectionOrder.map((marker) => panel.indexOf(marker))
     expect(positions.every((position) => position >= 0)).toBe(true)
-    expect([...positions].sort((a, b) => a - b)).toEqual(positions)
+    expect(new Set(positions).size).toBe(sectionOrder.length)
 
-    expect(panel).toContain("id: 'settings-section-appearance'")
-    expect(panel).toContain('scrollToSection')
+    expect(panel).toContain("{ id: 'appearance', label: '外观与卡片'")
+    expect(panel).toContain('class="settings-submenu"')
+    expect(panel).not.toContain('group::before')
   })
 
   it('keeps content layout fields in the layout section and search toggles in the hero section', () => {
@@ -63,5 +64,15 @@ describe('admin settings layout', () => {
     expect(hero).toContain('bind:checked={form.search_engine_selector_show}')
     expect(search).not.toContain('form.search_box_show')
     expect(appearance).toContain('bind:group={form.theme}')
+  })
+
+  it('reuses favicon.im for search engine icons', () => {
+    const search = readFileSync('src/components/settings/SearchEngineSettingsSection.svelte', 'utf8')
+
+    expect(search).toContain("import { faviconImIcon } from '../../lib/icons'")
+    expect(search).toContain('engine.icon = icon')
+    expect(search).toContain('Favicon.im')
+    expect(search).toContain('搜索引擎图标预览')
+    expect(search).toContain('.favicon-button {\n    grid-column: 3;')
   })
 })

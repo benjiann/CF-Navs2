@@ -183,8 +183,8 @@
               <col style="width: 44px;" />
               <col style="width: 30%;" />
               <col style="width: 50%;" />
-              <col style="width: 15%;" />
-              <col style="width: 5%;" />
+              <col style="width: 12%;" />
+              <col style="width: 8%;" />
               {#if !sortMode}<col style="width: 122px;" />{/if}
             </colgroup>
             <thead>

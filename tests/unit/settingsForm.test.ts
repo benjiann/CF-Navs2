@@ -13,11 +13,30 @@ import {
 
 describe('settings form model', () => {
   it('keeps every built-in background preset available through the shared preset contract', () => {
-    expect(gradientPresets).toHaveLength(13)
+    expect(gradientPresets).toHaveLength(22)
     expect(gradientPresets.map((preset) => preset.id)).toEqual([
+      'paper-sage', 'paper-clay', 'paper-wheat', 'paper-slate', 'paper-pine', 'paper-sakura', 'paper-lavender', 'paper-indigo', 'paper-amber',
       'clear-teal', 'mist-slate', 'coral-sky', 'sage-graphite', 'lumen-amber', 'ember-night',
       'violet-dawn', 'ocean-depths', 'aurora-borealis', 'citrus-sunset', 'rose-orbit',
       'indigo-noir', 'terracotta-dune',
+    ])
+    expect(gradientPresets.find((preset) => preset.id === 'paper-sage')?.surface).toBe('flat')
+    expect(gradientPresets.filter((preset) => preset.surface === 'glass')).toHaveLength(13)
+    expect(
+      gradientPresets
+        .filter((preset) => preset.surface === 'flat')
+        .map((preset) => preset.light.value),
+    ).toEqual([
+      '#e8f0e3', '#f1e2de', '#f2e8d6', '#e0ebf0', '#e3ecdf',
+      '#f3e1e7', '#e9e5f3', '#dbeaff', '#f4e6c8',
+    ])
+    expect(
+      gradientPresets
+        .filter((preset) => preset.surface === 'flat')
+        .map((preset) => preset.accentColor),
+    ).toEqual([
+      '#71836f', '#b08f89', '#a98c65', '#718a98', '#5c6857',
+      '#c88797', '#857bb8', '#5f769b', '#bd8b42',
     ])
   })
 

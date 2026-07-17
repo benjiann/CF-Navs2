@@ -75,13 +75,13 @@
       <div class="import-actions">
         <label class="import-source-field" for="import-source">
           <span>导入来源</span>
-          <select id="import-source" bind:value={importSource} on:change={() => { if (importSource === 'browser-html') importMode = 'merge' }} disabled={!isAuthenticated || importing}>
+          <select class="native-select" id="import-source" bind:value={importSource} on:change={() => { if (importSource === 'browser-html') importMode = 'merge' }} disabled={!isAuthenticated || importing}>
             <option value="cf-navs">CF-Navs 备份</option>
             <option value="sunpanel">SunPanel 导出</option>
             <option value="browser-html">浏览器书签 HTML</option>
           </select>
         </label>
-        <label class="import-source-field"><span>导入模式</span><select bind:value={importMode} disabled={!isAuthenticated || importing}><option value="merge">追加合并</option><option value="replace">覆盖现有数据</option></select></label>
+        <label class="import-source-field"><span>导入模式</span><select class="native-select" bind:value={importMode} disabled={!isAuthenticated || importing}><option value="merge">追加合并</option><option value="replace">覆盖现有数据</option></select></label>
         <button type="button" class="ghost-button" on:click={triggerImport} disabled={!isAuthenticated || importing}>
           {#if importing}导入中...{:else}选择文件并导入{/if}
         </button>
@@ -190,6 +190,7 @@
   }
 
   .import-source-field select {
+    --select-hover-border: var(--admin-input-hover-border);
     min-height: 39px;
     border: 1px solid var(--admin-input-border);
     border-radius: 12px;

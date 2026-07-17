@@ -191,6 +191,7 @@
 
   $: if (typeof document !== 'undefined') {
     document.documentElement.dataset.theme = activeTheme
+    document.documentElement.dataset.backgroundPreset = publicData?.settings.background_preset_id ?? 'custom'
   }
 
   function setPreferredThemeMode(mode: ThemeMode): void {

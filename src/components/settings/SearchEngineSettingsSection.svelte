@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte'
+  import { faviconImIcon } from '../../lib/icons'
   import { cloneSettingsForm, type SettingsFormModel } from '../../lib/settingsForm'
 
   export let form: SettingsFormModel
@@ -28,6 +29,21 @@
     }
     form = cloneSettingsForm(form)
   }
+
+  function applyFaviconImIcon(index: number): void {
+    const engine = form.search_engine.engines[index]
+    if (!engine) return
+
+    const icon = faviconImIcon(engine.url_template)
+    if (!icon) return
+
+    engine.icon = icon
+    form = cloneSettingsForm(form)
+  }
+
+  function canPreviewIcon(icon: string): boolean {
+    return /^(https?:\/\/|data:image\/)/i.test(icon.trim())
+  }
 </script>
 
 <fieldset
@@ -43,7 +59,7 @@
   <div class="settings-grid search-controls-grid">
     <label class="field field-select">
       <span>默认引擎</span>
-      <select bind:value={form.search_engine.current} disabled={form.search_engine.engines.length === 0}>
+      <select class="native-select" bind:value={form.search_engine.current} disabled={form.search_engine.engines.length === 0}>
         {#if form.search_engine.engines.length === 0}
           <option value="">无可用引擎</option>
         {:else}
@@ -67,7 +83,25 @@
         </label>
         <label class="engine-cell">
           <span>图标 URL（可选）</span>
-          <input bind:value={engine.icon} type="text" placeholder="留空显示首字母" />
+          <div class="engine-icon-control">
+            <input bind:value={engine.icon} type="text" placeholder="留空显示首字母" />
+            {#if canPreviewIcon(engine.icon)}
+              <span class="engine-icon-preview" title="搜索引擎图标预览">
+                <img src={engine.icon} alt="" loading="lazy" decoding="async" />
+              </span>
+            {/if}
+            <button
+              type="button"
+              class="ghost-button favicon-button"
+              on:click={() => applyFaviconImIcon(index)}
+              disabled={!faviconImIcon(engine.url_template)}
+              title={faviconImIcon(engine.url_template)
+                ? '根据查询模板域名生成 Favicon.im 图标 URL'
+                : '请先填写有效的查询模板 URL'}
+            >
+              Favicon.im
+            </button>
+          </div>
         </label>
         <label class="engine-cell grow">
           <span>查询模板（含 {'{q}'} 占位符）</span>
@@ -109,7 +143,7 @@
 
   .engine-row {
     display: grid;
-    grid-template-columns: minmax(130px, 0.7fr) minmax(150px, 0.8fr) minmax(240px, 1.6fr) auto;
+    grid-template-columns: minmax(130px, 0.65fr) minmax(260px, 1.15fr) minmax(240px, 1.5fr) auto;
     gap: 10px;
     align-items: end;
     border: 1px solid var(--sp-toggle-border);
@@ -120,6 +154,64 @@
 
   .engine-cell.grow {
     min-width: 0;
+  }
+
+  .engine-icon-control {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 36px auto;
+    gap: 7px;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .engine-icon-control input {
+    grid-column: 1;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    border: 1px solid var(--sp-input-border);
+    border-radius: 10px;
+    padding: 9px 11px;
+    background: var(--sp-input-bg);
+    color: var(--sp-input-text);
+    font: inherit;
+    font-size: 14px;
+    transition:
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      background 0.18s ease;
+  }
+
+  .engine-icon-control input:focus {
+    outline: none;
+    border-color: var(--sp-accent);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+
+  .engine-icon-preview {
+    grid-column: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    box-sizing: border-box;
+    border: 1px solid var(--sp-input-border);
+    border-radius: 10px;
+    background: var(--sp-input-bg);
+  }
+
+  .engine-icon-preview img {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    object-fit: contain;
+  }
+
+  .favicon-button {
+    grid-column: 3;
+    min-height: 36px;
+    padding: 8px 11px;
   }
 
   .add-engine {
@@ -138,6 +230,17 @@
 
     .engine-cell.grow,
     .engine-row .danger-button {
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .engine-icon-control {
+      grid-template-columns: minmax(0, 1fr) 36px;
+    }
+
+    .favicon-button {
+      grid-column: 1 / -1;
       width: 100%;
     }
   }

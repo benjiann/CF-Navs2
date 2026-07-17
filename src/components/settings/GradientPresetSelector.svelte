@@ -8,6 +8,9 @@
     custom: void
     select: ThemeGradientPreset
   }>()
+
+  $: glassPresets = gradientPresets.filter((preset) => preset.surface === 'glass')
+  $: flatPresets = gradientPresets.filter((preset) => preset.surface === 'flat')
 </script>
 
 <div class="gradient-preset-panel">
@@ -23,8 +26,11 @@
     {/if}
   </div>
 
-  <div class="gradient-preset-grid">
-    {#each gradientPresets as preset (preset.id)}
+  {#each [{ label: '毛玻璃氛围', hint: '渐变背景、半透明卡片与柔和光晕', items: glassPresets }, { label: '护眼纯色', hint: '低饱和纯色背景与不透明卡片', items: flatPresets }] as group (group.label)}
+    <div class="gradient-preset-group">
+      <div class="gradient-preset-group-title"><strong>{group.label}</strong><span>{group.hint}</span></div>
+      <div class="gradient-preset-grid">
+      {#each group.items as preset (preset.id)}
       <label
         class="gradient-preset-option"
         class:active={activeGradientPresetId === preset.id}
@@ -45,8 +51,13 @@
           <small>{preset.description}</small>
         </span>
       </label>
-    {/each}
+      {/each}
+      </div>
+    </div>
+  {/each}
 
+  <div class="gradient-preset-group">
+    <div class="gradient-preset-group-title"><strong>自定义</strong><span>手动维护浅色/深色背景与卡片参数</span></div>
     <label class="gradient-preset-option custom" class:active={activeGradientPresetId === 'custom'}>
       <input
         type="radio"
@@ -112,6 +123,11 @@
     grid-template-columns: repeat(auto-fit, minmax(176px, 1fr));
     gap: 10px;
   }
+
+  .gradient-preset-group { display: grid; gap: 8px; }
+  .gradient-preset-group-title { display: flex; align-items: baseline; gap: 10px; }
+  .gradient-preset-group-title strong { color: var(--sp-heading); font-size: 13px; }
+  .gradient-preset-group-title span { color: var(--sp-muted); font-size: 12px; }
 
   .gradient-preset-option {
     position: relative;
