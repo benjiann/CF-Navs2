@@ -28,6 +28,29 @@ select {
   font: inherit;
 }
 
+select.native-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.35rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 1rem) 50%,
+    calc(100% - 0.72rem) 50%;
+  background-repeat: no-repeat;
+  background-size: 0.32rem 0.32rem, 0.32rem 0.32rem;
+  cursor: pointer;
+}
+
+select.native-select:hover:not(:disabled) {
+  border-color: var(--select-hover-border, rgba(100, 116, 139, 0.58));
+}
+
+select.native-select:disabled {
+  cursor: not-allowed;
+}
+
 .app-shell {
   min-height: 100vh;
 }

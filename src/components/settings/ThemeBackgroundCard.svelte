@@ -73,7 +73,7 @@
     <div class="background-main-row">
       <label class="field background-type-field">
         <span>背景类型</span>
-        <select value={background.type} on:change={updateBackgroundType}>
+        <select class="native-select" value={background.type} on:change={updateBackgroundType}>
           {#each backgroundTypeOptions as option}
             <option value={option.value}>{option.label}</option>
           {/each}
@@ -280,6 +280,7 @@
 
   input:not([type='radio']):not([type='checkbox']),
   select {
+    --select-hover-border: var(--sp-input-hover-border);
     width: 100%;
     box-sizing: border-box;
     border: 1px solid var(--sp-input-border);
@@ -287,7 +288,7 @@
     padding: 9px 11px;
     font-size: 14px;
     color: var(--sp-input-text);
-    background: var(--sp-input-bg);
+    background-color: var(--sp-input-bg);
     font-family: inherit;
     transition:
       border-color 0.18s ease,

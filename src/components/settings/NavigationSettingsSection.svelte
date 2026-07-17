@@ -75,7 +75,7 @@
           />
           <select
             bind:value={form.content_layout.max_width_unit}
-            class="unit-select"
+            class="unit-select native-select"
             aria-label="最大宽度单位"
             on:change={() => void syncForm()}
           >
