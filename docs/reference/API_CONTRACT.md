@@ -135,7 +135,9 @@ HTTP(S) 图标抓取成功后，代理会直接返回图片字节并写入 Cloud
 - 毛玻璃渐变：`clear-teal`、`mist-slate`、`coral-sky`、`sage-graphite`、`lumen-amber`、`ember-night`、`violet-dawn`、`ocean-depths`、`aurora-borealis`、`citrus-sunset`、`rose-orbit`、`indigo-noir`、`terracotta-dune`；
 - 自定义：`custom`。
 
-选择内置方案时前端同时写入对应的 `backgrounds`、遮罩、卡片背景透明度和自动文字色设置。运行时根据 `background_preset_id` 选择对应的亮暗强调色；护眼纯色在暗色模式下还会使用预设的深色卡片背景。旧数据缺少 `background_preset_id`，或仍为 `custom` 但浅色/深色背景值匹配内置方案时，后台面板会自动识别并显示对应预设。
+选择内置方案时前端同时写入对应的 `backgrounds`、遮罩、卡片背景透明度和自动文字色设置。护眼纯色默认将 `card_background_opacity` 设为 `0.9`，浅色模式使用与页面背景同色系的浅卡片色，暗色模式使用预设的深色卡片色；该透明度同时作用于书签卡片、搜索框和分类导航。运行时根据 `background_preset_id` 选择对应的亮暗强调色和高对比标题/备注颜色，用户设置的 `card_text_color` 始终优先。
+
+旧数据缺少 `background_preset_id`，或仍为 `custom` 但浅色/深色背景值匹配内置方案时，后台面板会自动识别并显示对应预设。旧版护眼配置中的白色卡片背景会在公开设置聚合时映射为当前护眼预设的同色系卡片色；用户保存的非白色卡片背景保持不变。
 
 ## 导入接口
 
