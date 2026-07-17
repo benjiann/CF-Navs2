@@ -22,7 +22,7 @@
   on:change={() => void syncForm()}
 >
   <legend>卡片样式</legend>
-  <p class="group-desc">书签卡片的风格、密度和毛玻璃外观。选择配色方案后会自动匹配一组推荐值。</p>
+  <p class="group-desc">书签卡片的风格、密度和表面颜色。选择配色方案后会自动匹配一组推荐值。</p>
 
   <div class="settings-subsection">
     <h3>卡片风格</h3>
@@ -86,7 +86,7 @@
   </div>
 
   <div class="settings-subsection">
-    <h3>毛玻璃外观</h3>
+    <h3>卡片表面</h3>
     <div class="settings-grid card-appearance-grid">
       <div class="field field-color">
         <span>卡片底色</span>
@@ -99,13 +99,13 @@
           swatchTitle="选择卡片颜色"
           alphaText="卡片透明度"
         />
-        <small>毛玻璃卡片的基础色，深色模式会自动转为深色玻璃并保留此色调。</small>
+        <small>卡片的基础色；内置主题会先给出协调色，仍可手动修改。</small>
       </div>
 
       <label class="field field-range">
         <span>卡片透明度 <em>{form.card_background_opacity.toFixed(2)}</em></span>
         <input bind:value={form.card_background_opacity} type="range" min="0" max="1" step="0.05" />
-        <small>越低越通透，能看到更多背景色彩；推荐 0.35-0.55。</small>
+        <small>越低越通透；毛玻璃推荐 0.35-0.55，护眼纯色推荐 0.80-0.95。</small>
       </label>
 
       <div class="field field-color">

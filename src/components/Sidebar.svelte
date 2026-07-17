@@ -402,10 +402,10 @@
   }
 
   :global(html[data-background-preset^='paper-']) :is(.toc-mobile-btn, .toc-sidebar, .top-navigation) {
-    --toc-surface: rgb(var(--card-bg-rgb));
-    --toc-surface-strong: rgb(var(--card-bg-rgb));
-    --toc-item-bg: color-mix(in srgb, var(--home-accent-color) 8%, rgb(var(--card-bg-rgb)));
-    --toc-item-hover-bg: color-mix(in srgb, var(--home-accent-color) 14%, rgb(var(--card-bg-rgb)));
+    --toc-surface: rgb(var(--card-bg-rgb) / calc(var(--card-bg-opacity, 0.9) * 0.88));
+    --toc-surface-strong: rgb(var(--card-bg-rgb) / var(--card-bg-opacity, 0.9));
+    --toc-item-bg: color-mix(in srgb, var(--home-accent-color) 8%, rgb(var(--card-bg-rgb) / var(--card-bg-opacity, 0.9)));
+    --toc-item-hover-bg: color-mix(in srgb, var(--home-accent-color) 14%, rgb(var(--card-bg-rgb) / var(--card-bg-opacity, 0.9)));
     --toc-item-border: color-mix(in srgb, var(--home-accent-color) 20%, transparent);
     --toc-border: color-mix(in srgb, var(--home-accent-color) 24%, transparent);
     --toc-accent: var(--home-accent-color);
@@ -414,10 +414,10 @@
   }
 
   :global(html[data-theme='dark'][data-background-preset^='paper-']) :is(.toc-mobile-btn, .toc-sidebar, .top-navigation) {
-    --toc-surface: rgb(var(--card-bg-rgb));
-    --toc-surface-strong: rgb(var(--card-bg-rgb));
-    --toc-item-bg: color-mix(in srgb, var(--home-accent-color) 8%, rgb(var(--card-bg-rgb)));
-    --toc-item-hover-bg: color-mix(in srgb, var(--home-accent-color) 14%, rgb(var(--card-bg-rgb)));
+    --toc-surface: rgb(var(--card-bg-rgb) / calc(var(--card-bg-opacity, 0.9) * 0.88));
+    --toc-surface-strong: rgb(var(--card-bg-rgb) / var(--card-bg-opacity, 0.9));
+    --toc-item-bg: color-mix(in srgb, var(--home-accent-color) 8%, rgb(var(--card-bg-rgb) / var(--card-bg-opacity, 0.9)));
+    --toc-item-hover-bg: color-mix(in srgb, var(--home-accent-color) 14%, rgb(var(--card-bg-rgb) / var(--card-bg-opacity, 0.9)));
     --toc-item-border: color-mix(in srgb, var(--home-accent-color) 18%, transparent);
     --toc-border: color-mix(in srgb, var(--home-accent-color) 22%, transparent);
     --toc-accent: var(--home-accent-color);

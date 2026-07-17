@@ -225,12 +225,27 @@ export function buildHomeBackground(settings: PublicSettings | null, theme: 'lig
   const backgroundFilter = blur > 0 ? `blur(${blur}px)` : 'none'
   const backgroundTransform = blur > 0 ? 'scale(1.06)' : 'none'
   const activePreset = gradientPresets.find((preset) => preset.id === settings.background_preset_id)
+  const storedCardColor = settings.card_background_color?.trim() || '#ffffff'
+  const lightCardColor = activePreset?.surface === 'flat' && storedCardColor.toLowerCase() === '#ffffff'
+    ? activePreset.cardBackgroundColor
+    : storedCardColor
   const cardColor = activePreset?.surface === 'flat' && theme === 'dark'
     ? activePreset.darkCardBackgroundColor
-    : settings.card_background_color?.trim() || '#ffffff'
+    : lightCardColor
   const accentColor = activePreset
     ? (theme === 'dark' ? activePreset.darkAccentColor : activePreset.accentColor)
     : (theme === 'dark' ? '#7dd3fc' : '#2563eb')
+  const customCardTextColor = settings.card_text_color?.trim()
+  const cardTitleColor = customCardTextColor || (
+    activePreset
+      ? (theme === 'dark' ? activePreset.darkCardTitleColor : activePreset.lightCardTitleColor)
+      : (theme === 'dark' ? '#e5eefb' : '#0f172a')
+  )
+  const cardDescriptionColor = customCardTextColor || (
+    activePreset
+      ? (theme === 'dark' ? activePreset.darkCardDescriptionColor : activePreset.lightCardDescriptionColor)
+      : (theme === 'dark' ? '#cbd5e1' : '#475569')
+  )
   const cardOpacity = typeof settings.card_background_opacity === 'number'
     ? Math.min(1, Math.max(0, settings.card_background_opacity))
     : 0.9
@@ -245,6 +260,8 @@ export function buildHomeBackground(settings: PublicSettings | null, theme: 'lig
     `--home-background-mask-color: ${maskColor};`,
     `--card-bg-rgb: ${cardRgb};`,
     `--card-bg-opacity: ${cardOpacity};`,
+    `--card-title-color: ${cardTitleColor};`,
+    `--card-description-color: ${cardDescriptionColor};`,
     `--theme-accent-color: ${accentColor};`,
   ].join(' ')
 }

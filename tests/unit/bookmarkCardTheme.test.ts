@@ -24,21 +24,35 @@ describe('bookmark card theme styles', () => {
     const source = readFileSync('src/components/BookmarkCardCompact.svelte', 'utf8')
 
     expect(source).toContain(":global([data-theme='dark']) .bookmark-icon-title")
-    expect(source).toContain('color: var(--card-text-color, #e5eefb);')
+    expect(source).toContain('color: var(--card-title-color, var(--card-text-color, #e5eefb));')
   })
 
   it('keeps information card titles readable in dark mode', () => {
     const source = readFileSync('src/components/BookmarkCardInfo.svelte', 'utf8')
 
     expect(source).toContain(":global([data-theme='dark']) .bookmark-card-info .bookmark-title")
-    expect(source).toContain('color: var(--card-text-color, #e5eefb);')
+    expect(source).toContain('color: var(--card-title-color, var(--card-text-color, #e5eefb));')
   })
 
-  it('keeps light-mode bookmark descriptions above normal-text contrast', () => {
+  it('uses a dedicated theme-aware color for bookmark descriptions', () => {
     const source = readFileSync('src/components/BookmarkCardInfo.svelte', 'utf8')
 
-    expect(source).toContain('color: var(--card-text-color, #475569);')
-    expect(source).toContain('opacity: 0.88;')
+    expect(source).toContain('color: var(--card-description-color, var(--card-text-color, #475569));')
+    expect(source).toContain('color: var(--card-description-color, var(--card-text-color, #cbd5e1));')
+  })
+
+  it('keeps eye-care surfaces connected to the user-controlled card opacity', () => {
+    const compact = readFileSync('src/components/BookmarkCardCompact.svelte', 'utf8')
+    const info = readFileSync('src/components/BookmarkCardInfo.svelte', 'utf8')
+    const search = readFileSync('src/components/SearchBox.svelte', 'utf8')
+    const sidebar = readFileSync('src/components/Sidebar.svelte', 'utf8')
+
+    for (const source of [compact, info, search, sidebar]) {
+      expect(source).toContain('var(--card-bg-opacity, 0.9)')
+    }
+    expect(compact).not.toContain('background: rgb(var(--card-bg-rgb));')
+    expect(info).not.toContain('background: rgb(var(--card-bg-rgb));')
+    expect(search).not.toContain('background-color: rgb(var(--card-bg-rgb));')
   })
 
   it('keeps category helper texts on theme-aware colors', () => {
