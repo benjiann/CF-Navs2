@@ -24,6 +24,11 @@ describe('asset response headers', () => {
     expect(response.headers.get('Content-Security-Policy')).toBeNull()
   })
 
+  it('adds short cache headers to browser icon assets', () => {
+    expect(applyHeaders('/icon.ico', new Response('ico')).headers.get('Cache-Control')).toBe('public, max-age=86400')
+    expect(applyHeaders('/icon.png', new Response('png')).headers.get('Cache-Control')).toBe('public, max-age=86400')
+  })
+
   it('does not override cache headers on failed asset responses', () => {
     const response = applyHeaders('/assets/missing.js', new Response('missing', {
       status: 404,
@@ -37,6 +42,8 @@ describe('asset response headers', () => {
 
     expect(headersFile).toContain('/assets/*')
     expect(headersFile).toContain('Cache-Control: public, max-age=31536000, immutable')
+    expect(headersFile).toContain('/icon.ico')
+    expect(headersFile).toContain('/icon.png')
     expect(headersFile).toContain('/sw.js')
     expect(headersFile).toContain('Cache-Control: no-cache, max-age=0, must-revalidate')
   })

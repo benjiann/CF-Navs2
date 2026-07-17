@@ -6,9 +6,9 @@
 // - /api/icon/* and /api/iconify/*: do not write to Cache Storage; rely on HTTP and edge caching.
 // - Other /api/* requests: network only.
 
-const CACHE = 'cf-navs-v13'
+const CACHE = 'cf-navs-v14'
 const RUNTIME_CACHE_PREFIX = 'cf-navs-v'
-const APP_SHELL = ['/index.html', '/manifest.webmanifest', '/icon.svg']
+const APP_SHELL = ['/index.html', '/manifest.webmanifest', '/icon.ico', '/icon.png']
 const ICON_FALLBACK_TTL_MS = 5 * 60 * 1000
 const ICON_FALLBACK_CACHED_AT = 'X-CF-Navs-Fallback-Cached-At'
 const MAX_ICON_CACHE_BYTES = 512 * 1024

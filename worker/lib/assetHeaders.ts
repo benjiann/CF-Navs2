@@ -38,7 +38,11 @@ export function withAssetCacheHeaders(request: Request, response: Response): Res
       headers.set('Cache-Control', REVALIDATE_CACHE)
     } else if (url.pathname.startsWith('/assets/')) {
       headers.set('Cache-Control', IMMUTABLE_ASSET_CACHE)
-    } else if (url.pathname === '/manifest.webmanifest' || url.pathname === '/icon.svg') {
+    } else if (
+      url.pathname === '/manifest.webmanifest' ||
+      url.pathname === '/icon.ico' ||
+      url.pathname === '/icon.png'
+    ) {
       headers.set('Cache-Control', SHORT_STATIC_CACHE)
     }
 

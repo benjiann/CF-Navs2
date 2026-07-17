@@ -1,7 +1,10 @@
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
-/icon.svg
+/icon.ico
+  Cache-Control: public, max-age=86400
+
+/icon.png
   Cache-Control: public, max-age=86400
 
 /manifest.webmanifest
