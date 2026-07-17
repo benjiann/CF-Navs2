@@ -11,6 +11,35 @@ import {
   normalizeSettingsForm,
 } from '../../src/lib/settingsForm'
 
+function hexToRgb(hex: string): [number, number, number] {
+  return [1, 3, 5].map((index) => Number.parseInt(hex.slice(index, index + 2), 16)) as [number, number, number]
+}
+
+function mixColor(foreground: string, background: string, alpha: number): [number, number, number] {
+  const foregroundRgb = hexToRgb(foreground)
+  const backgroundRgb = hexToRgb(background)
+  return foregroundRgb.map((channel, index) => (
+    Math.round(channel * alpha + backgroundRgb[index] * (1 - alpha))
+  )) as [number, number, number]
+}
+
+function relativeLuminance(color: [number, number, number]): number {
+  const [red, green, blue] = color.map((channel) => {
+    const normalized = channel / 255
+    return normalized <= 0.04045
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4
+  })
+  return red * 0.2126 + green * 0.7152 + blue * 0.0722
+}
+
+function contrastRatio(foreground: string, background: [number, number, number]): number {
+  const foregroundLuminance = relativeLuminance(hexToRgb(foreground))
+  const backgroundLuminance = relativeLuminance(background)
+  return (Math.max(foregroundLuminance, backgroundLuminance) + 0.05)
+    / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05)
+}
+
 describe('settings form model', () => {
   it('keeps every built-in background preset available through the shared preset contract', () => {
     expect(gradientPresets).toHaveLength(22)
@@ -38,6 +67,39 @@ describe('settings form model', () => {
       '#71836f', '#b08f89', '#a98c65', '#718a98', '#5c6857',
       '#c88797', '#857bb8', '#5f769b', '#bd8b42',
     ])
+    expect(
+      gradientPresets
+        .filter((preset) => preset.surface === 'flat')
+        .map((preset) => preset.cardBackgroundColor),
+    ).toEqual([
+      '#f3f7f0', '#f8efec', '#faf3e6', '#eff5f7', '#f0f5ed',
+      '#faedf1', '#f4f1f8', '#edf4ff', '#fbf3e2',
+    ])
+    expect(
+      gradientPresets
+        .filter((preset) => preset.surface === 'flat')
+        .every((preset) => preset.cardBackgroundOpacity === 0.9),
+    ).toBe(true)
+  })
+
+  it('keeps eye-care title and description colors readable across card opacity extremes', () => {
+    const flatPresets = gradientPresets.filter((preset) => preset.surface === 'flat')
+
+    for (const preset of flatPresets) {
+      const lightPage = hexToRgb(preset.light.value)
+      const lightCard = mixColor(preset.cardBackgroundColor, preset.light.value, preset.cardBackgroundOpacity)
+      const darkPage = hexToRgb(preset.dark.value)
+      const darkCard = mixColor(preset.darkCardBackgroundColor, preset.dark.value, preset.cardBackgroundOpacity)
+
+      expect(contrastRatio(preset.lightCardTitleColor, lightPage)).toBeGreaterThanOrEqual(7)
+      expect(contrastRatio(preset.lightCardTitleColor, lightCard)).toBeGreaterThanOrEqual(7)
+      expect(contrastRatio(preset.lightCardDescriptionColor, lightPage)).toBeGreaterThanOrEqual(4.5)
+      expect(contrastRatio(preset.lightCardDescriptionColor, lightCard)).toBeGreaterThanOrEqual(4.5)
+      expect(contrastRatio(preset.darkCardTitleColor, darkPage)).toBeGreaterThanOrEqual(7)
+      expect(contrastRatio(preset.darkCardTitleColor, darkCard)).toBeGreaterThanOrEqual(7)
+      expect(contrastRatio(preset.darkCardDescriptionColor, darkPage)).toBeGreaterThanOrEqual(4.5)
+      expect(contrastRatio(preset.darkCardDescriptionColor, darkCard)).toBeGreaterThanOrEqual(4.5)
+    }
   })
 
   it('creates a complete editable form from partial settings', () => {

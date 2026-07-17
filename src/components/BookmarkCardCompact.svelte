@@ -113,7 +113,7 @@
     display: block;
     width: 100%;
     margin-top: 0.45rem;
-    color: var(--card-text-color, #0f172a);
+    color: var(--card-title-color, var(--card-text-color, #0f172a));
     font-size: 0.82rem;
     font-weight: 600;
     line-height: 1.25;
@@ -152,19 +152,19 @@
 
   :global(html[data-background-preset^='paper-']) .bookmark-card-icon {
     border-color: color-mix(in srgb, var(--home-accent-color) 24%, transparent);
-    background: rgb(var(--card-bg-rgb));
+    background: rgb(var(--card-bg-rgb) / var(--card-bg-opacity, 0.9));
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    box-shadow: 0 8px 22px rgba(75, 83, 70, 0.08);
+    box-shadow: 0 8px 22px color-mix(in srgb, var(--home-accent-color) 16%, transparent);
   }
 
   :global(html[data-theme='dark'][data-background-preset^='paper-']) .bookmark-card-icon {
     border-color: color-mix(in srgb, var(--home-accent-color) 24%, transparent);
-    background: rgb(var(--card-bg-rgb));
+    background: rgb(var(--card-bg-rgb) / var(--card-bg-opacity, 0.9));
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
   }
 
   :global([data-theme='dark']) .bookmark-icon-title {
-    color: var(--card-text-color, #e5eefb);
+    color: var(--card-title-color, var(--card-text-color, #e5eefb));
   }
 </style>

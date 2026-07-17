@@ -169,6 +169,43 @@ describe('app data adapters', () => {
     expect(cssVars).toContain('--home-background-mask: 0.25;')
     expect(cssVars).toContain('--card-bg-rgb: 18 52 86;')
     expect(cssVars).toContain('--card-bg-opacity: 0.75;')
+    expect(cssVars).toContain('--card-title-color: #0f172a;')
+    expect(cssVars).toContain('--card-description-color: #475569;')
+  })
+
+  it('uses eye-care preset card colors while preserving user opacity and text overrides', () => {
+    const eyeCareSettings = toPublicSettings({
+      ...settings,
+      background_preset_id: 'paper-indigo',
+      backgrounds: {
+        light: { type: 'color', value: '#dbeaff', blur: 0, mask: 0, maskColor: '#ffffff' },
+        dark: { type: 'color', value: '#1d222a', blur: 0, mask: 0, maskColor: '#000000' },
+      },
+      card_background_color: '#ffffff',
+      card_background_opacity: 0.55,
+      card_text_color: '',
+    })
+
+    const lightCssVars = buildHomeBackground(eyeCareSettings, 'light')
+    expect(lightCssVars).toContain('--card-bg-rgb: 237 244 255;')
+    expect(lightCssVars).toContain('--card-bg-opacity: 0.55;')
+    expect(lightCssVars).toContain('--card-title-color: #243247;')
+    expect(lightCssVars).toContain('--card-description-color: #53647d;')
+
+    const darkCssVars = buildHomeBackground(eyeCareSettings, 'dark')
+    expect(darkCssVars).toContain('--card-bg-rgb: 40 47 57;')
+    expect(darkCssVars).toContain('--card-bg-opacity: 0.55;')
+    expect(darkCssVars).toContain('--card-title-color: #edf3fb;')
+    expect(darkCssVars).toContain('--card-description-color: #bac7d9;')
+
+    const customizedCssVars = buildHomeBackground({
+      ...eyeCareSettings,
+      card_background_color: '#abcdef',
+      card_text_color: '#112233',
+    }, 'light')
+    expect(customizedCssVars).toContain('--card-bg-rgb: 171 205 239;')
+    expect(customizedCssVars).toContain('--card-title-color: #112233;')
+    expect(customizedCssVars).toContain('--card-description-color: #112233;')
   })
 
   it('returns the editable settings form subset', () => {

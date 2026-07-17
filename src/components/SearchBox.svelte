@@ -206,7 +206,7 @@
 
   :global(html[data-background-preset^='paper-']) :is(.search-input, .engine-icon-button, .engine-menu) {
     border-color: color-mix(in srgb, var(--home-accent-color) 24%, transparent);
-    background-color: rgb(var(--card-bg-rgb));
+    background-color: rgb(var(--card-bg-rgb) / var(--card-bg-opacity, 0.9));
     backdrop-filter: none;
   }
 
@@ -216,7 +216,7 @@
 
   :global(html[data-theme='dark'][data-background-preset^='paper-']) :is(.search-input, .engine-icon-button, .engine-menu) {
     border-color: color-mix(in srgb, var(--home-accent-color) 24%, transparent);
-    background-color: rgb(var(--card-bg-rgb));
+    background-color: rgb(var(--card-bg-rgb) / var(--card-bg-opacity, 0.9));
     color: #e5eee2;
   }
 

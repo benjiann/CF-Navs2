@@ -121,7 +121,7 @@
     font-weight: 600;
     margin: 0;
     line-height: 1.2;
-    color: var(--card-text-color, #0f172a);
+    color: var(--card-title-color, var(--card-text-color, #0f172a));
     text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -130,8 +130,7 @@
 
   .bookmark-card-info .bookmark-description {
     font-size: 0.75rem;
-    color: var(--card-text-color, #475569);
-    opacity: 0.88;
+    color: var(--card-description-color, var(--card-text-color, #475569));
     margin: 0.25rem 0 0 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -168,25 +167,24 @@
   }
 
   :global([data-theme='dark']) .bookmark-card-info .bookmark-title {
-    color: var(--card-text-color, #e5eefb);
+    color: var(--card-title-color, var(--card-text-color, #e5eefb));
   }
 
   :global([data-theme='dark']) .bookmark-card-info .bookmark-description {
-    color: var(--card-text-color, #cbd5e1);
-    opacity: 0.92;
+    color: var(--card-description-color, var(--card-text-color, #cbd5e1));
   }
 
   :global(html[data-background-preset^='paper-']) .bookmark-card-info {
     border-color: color-mix(in srgb, var(--home-accent-color) 24%, transparent);
-    background: rgb(var(--card-bg-rgb));
+    background: rgb(var(--card-bg-rgb) / var(--card-bg-opacity, 0.9));
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    box-shadow: 0 8px 22px rgba(75, 83, 70, 0.08);
+    box-shadow: 0 8px 22px color-mix(in srgb, var(--home-accent-color) 16%, transparent);
   }
 
   :global(html[data-theme='dark'][data-background-preset^='paper-']) .bookmark-card-info {
     border-color: color-mix(in srgb, var(--home-accent-color) 24%, transparent);
-    background: rgb(var(--card-bg-rgb));
+    background: rgb(var(--card-bg-rgb) / var(--card-bg-opacity, 0.9));
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
   }
 
