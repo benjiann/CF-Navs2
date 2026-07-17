@@ -16,7 +16,6 @@
   import NavigationSettingsSection from './settings/NavigationSettingsSection.svelte'
   import SearchEngineSettingsSection from './settings/SearchEngineSettingsSection.svelte'
   import PasswordChangePanel from './PasswordChangePanel.svelte'
-  import { gradientPresets } from '../lib/themePresets'
 
   type SettingsPanelValue = SettingsFormModel
   type AsyncVoid<T = void> = T | Promise<T>
@@ -50,8 +49,6 @@
   }
 
   $: normalizedForm = normalizeSettingsForm(form)
-  $: selectedThemePreset = gradientPresets.find((preset) => preset.id === normalizedForm.background_preset_id)
-  $: settingsThemeAccent = selectedThemePreset?.accentColor ?? 'var(--admin-accent, #2563eb)'
   $: normalizedInitialForm = normalizeSettingsForm(initialForm)
   $: isDirty = JSON.stringify(normalizedForm) !== JSON.stringify(normalizedInitialForm)
   $: hasTitle = normalizedForm.site_title.length > 0
@@ -96,7 +93,7 @@
 
 </script>
 
-<section class="settings-panel" style={`--settings-theme-accent: ${settingsThemeAccent};`} aria-busy={loading || saving}>
+<section class="settings-panel" aria-busy={loading || saving}>
   <div class="panel-header">
     <div class="panel-header-copy">
       <p class="panel-eyebrow">设置</p>
@@ -162,28 +159,27 @@
     --sp-strong: var(--admin-text, #1e293b);
     --sp-label: var(--admin-muted, #334155);
     --sp-muted: var(--admin-subtle, #64748b);
-    --sp-accent: var(--settings-theme-accent, var(--admin-accent, #2563eb));
-    --sp-accent-strong: var(--settings-theme-accent, var(--admin-accent-strong, #1d4ed8));
-    --sp-border: var(--admin-border, rgba(112, 126, 108, 0.22));
-    --sp-panel-bg: var(--admin-surface, #ffffff);
+    --sp-accent: var(--admin-accent, #2563eb);
+    --sp-accent-strong: var(--admin-accent-strong, #1d4ed8);
+    --sp-border: #e2e8f0;
+    --sp-panel-bg: #ffffff;
     --sp-panel-shadow:
-      0 24px 54px rgba(75, 83, 70, 0.1),
-      0 1px 0 rgba(255, 255, 255, 0.72) inset;
-    --sp-header-bg: var(--admin-sticky-bg, rgba(253, 252, 249, 0.88));
-    --sp-header-border: var(--admin-divider, rgba(112, 126, 108, 0.2));
-    --sp-group-bg: var(--admin-surface, rgba(253, 252, 249, 0.88));
-    --sp-group-bg-strong: rgba(255, 255, 255, 0.66);
-    --sp-group-border: rgba(112, 126, 108, 0.2);
-    --sp-subsection-border: rgba(112, 126, 108, 0.16);
-    --sp-input-bg: rgba(255, 255, 255, 0.78);
-    --sp-input-border: rgba(112, 126, 108, 0.28);
-    --sp-input-hover-border: rgba(112, 126, 108, 0.52);
-    --sp-input-text: #3f493d;
-    --sp-toggle-bg: rgba(239, 242, 235, 0.7);
-    --sp-toggle-border: rgba(112, 126, 108, 0.2);
-    --sp-toggle-hover-bg: rgba(255, 255, 255, 0.94);
-    --sp-footer-bg: rgba(253, 252, 249, 0.92);
-    --sp-footer-border: rgba(112, 126, 108, 0.24);
+      0 18px 44px rgba(15, 23, 42, 0.08);
+    --sp-header-bg: #ffffff;
+    --sp-header-border: #e2e8f0;
+    --sp-group-bg: #ffffff;
+    --sp-group-bg-strong: #f8fafc;
+    --sp-group-border: #e2e8f0;
+    --sp-subsection-border: #e2e8f0;
+    --sp-input-bg: #ffffff;
+    --sp-input-border: #cbd5e1;
+    --sp-input-hover-border: #94a3b8;
+    --sp-input-text: #0f172a;
+    --sp-toggle-bg: #f8fafc;
+    --sp-toggle-border: #e2e8f0;
+    --sp-toggle-hover-bg: #f1f5f9;
+    --sp-footer-bg: #ffffff;
+    --sp-footer-border: #e2e8f0;
     --sp-danger: #dc2626;
     --sp-danger-bg: #fef2f2;
     --sp-danger-border: #fecaca;
@@ -193,23 +189,18 @@
     --sp-warn: #b45309;
     --sp-status-bg: #f8fbff;
     --sp-status-border: #dbeafe;
-    --sp-chip-bg: #e5ebe2;
-    --sp-chip-text: #52634f;
-    --sp-chip-sky-bg: #edf0e8;
-    --sp-chip-sky-text: #667561;
-    --sp-gradient-panel-bg:
-      radial-gradient(circle at 18% 0%, rgba(205, 220, 200, 0.42), transparent 32%),
-      linear-gradient(135deg, rgba(253, 252, 249, 0.96), rgba(241, 245, 238, 0.78)),
-      #ffffff;
-    --sp-gradient-panel-border: rgba(147, 165, 139, 0.48);
-    --sp-option-bg: rgba(255, 255, 255, 0.88);
-    --sp-option-bg-active: rgba(255, 255, 255, 0.96);
-    --sp-option-border: rgba(203, 213, 225, 0.9);
-    --sp-theme-card-bg:
-      linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(255, 255, 255, 0.96)),
-      #ffffff;
-    --sp-theme-card-border: rgba(226, 232, 240, 0.94);
-    --sp-radio-border: rgba(226, 232, 240, 0.9);
+    --sp-chip-bg: #eff6ff;
+    --sp-chip-text: #1d4ed8;
+    --sp-chip-sky-bg: #f1f5f9;
+    --sp-chip-sky-text: #475569;
+    --sp-gradient-panel-bg: #f8fafc;
+    --sp-gradient-panel-border: #e2e8f0;
+    --sp-option-bg: #ffffff;
+    --sp-option-bg-active: #f8fafc;
+    --sp-option-border: #e2e8f0;
+    --sp-theme-card-bg: #ffffff;
+    --sp-theme-card-border: #e2e8f0;
+    --sp-radio-border: #e2e8f0;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     gap: 0;
@@ -233,26 +224,24 @@
     --sp-accent: var(--admin-accent, #a9c2a0);
     --sp-accent-strong: var(--admin-accent-strong, #d2e2ca);
     --sp-border: var(--admin-border, rgba(148, 163, 184, 0.22));
-    --sp-panel-bg:
-      linear-gradient(180deg, rgba(15, 23, 42, 0.82), rgba(15, 23, 42, 0.7)),
-      #0b1524;
+    --sp-panel-bg: #0f172a;
     --sp-panel-shadow:
       0 24px 54px rgba(0, 0, 0, 0.32),
       0 1px 0 rgba(255, 255, 255, 0.04) inset;
-    --sp-header-bg: rgba(15, 23, 42, 0.82);
+    --sp-header-bg: #0f172a;
     --sp-header-border: rgba(148, 163, 184, 0.2);
-    --sp-group-bg: rgba(15, 23, 42, 0.55);
-    --sp-group-bg-strong: rgba(15, 23, 42, 0.62);
+    --sp-group-bg: #111c2f;
+    --sp-group-bg-strong: #162238;
     --sp-group-border: rgba(148, 163, 184, 0.2);
     --sp-subsection-border: rgba(148, 163, 184, 0.18);
-    --sp-input-bg: rgba(15, 23, 42, 0.72);
+    --sp-input-bg: #111c2f;
     --sp-input-border: rgba(148, 163, 184, 0.32);
     --sp-input-hover-border: rgba(148, 163, 184, 0.5);
     --sp-input-text: #e5eefb;
-    --sp-toggle-bg: rgba(15, 23, 42, 0.5);
+    --sp-toggle-bg: #111c2f;
     --sp-toggle-border: rgba(148, 163, 184, 0.2);
-    --sp-toggle-hover-bg: rgba(30, 41, 59, 0.72);
-    --sp-footer-bg: rgba(15, 23, 42, 0.9);
+    --sp-toggle-hover-bg: #1e293b;
+    --sp-footer-bg: #0f172a;
     --sp-footer-border: rgba(148, 163, 184, 0.24);
     --sp-danger: #f87171;
     --sp-danger-bg: rgba(248, 113, 113, 0.12);
@@ -267,17 +256,12 @@
     --sp-chip-text: #bae6fd;
     --sp-chip-sky-bg: rgba(125, 211, 252, 0.16);
     --sp-chip-sky-text: #7dd3fc;
-    --sp-gradient-panel-bg:
-      radial-gradient(circle at 18% 0%, rgba(169, 194, 160, 0.14), transparent 32%),
-      linear-gradient(135deg, rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.5)),
-      #0b1524;
-    --sp-gradient-panel-border: rgba(169, 194, 160, 0.3);
-    --sp-option-bg: rgba(15, 23, 42, 0.55);
-    --sp-option-bg-active: rgba(30, 41, 59, 0.72);
+    --sp-gradient-panel-bg: #111c2f;
+    --sp-gradient-panel-border: rgba(148, 163, 184, 0.24);
+    --sp-option-bg: #111c2f;
+    --sp-option-bg-active: #1e293b;
     --sp-option-border: rgba(148, 163, 184, 0.24);
-    --sp-theme-card-bg:
-      linear-gradient(180deg, rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.55)),
-      #0b1524;
+    --sp-theme-card-bg: #111c2f;
     --sp-theme-card-border: rgba(148, 163, 184, 0.2);
     --sp-radio-border: rgba(148, 163, 184, 0.24);
   }
