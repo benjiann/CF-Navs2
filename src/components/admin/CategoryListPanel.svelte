@@ -6,6 +6,7 @@
     createAdminSortDraft,
     getAdminCategoryBookmarkCount,
     getAdminListTotalPages,
+    filterAdminCategories,
     getAdminSortIds,
     reorderAdminSortDraft,
   } from '../../lib/adminListState'
@@ -26,6 +27,7 @@
   export let onOpenCreateCategory: (() => AsyncVoid) | undefined = undefined
   export let onEditCategory: ((category: AdminCategory) => AsyncVoid) | undefined = undefined
   export let onDeleteCategory: ((category: AdminCategory) => AsyncVoid) | undefined = undefined
+  export let onBatchDeleteCategories: ((ids: number[]) => AsyncVoid) | undefined = undefined
   export let onOpenCreateBookmark: ((categoryId?: string | number) => AsyncVoid) | undefined = undefined
   export let onSortCategories: SortHandler | undefined = undefined
 
@@ -33,18 +35,44 @@
   let localCategories: AdminCategory[] = []
   let savingSort = false
   let page = 1
+  let selectedIds = new Set<number>()
+  let search = ''
 
-  $: totalPages = getAdminListTotalPages(categories.length)
+  $: filteredCategories = filterAdminCategories(categories, search)
+  $: totalPages = getAdminListTotalPages(filteredCategories.length)
   $: page = clampAdminListPage(page, totalPages)
-  $: categoryPage = createAdminListPage(categories, page)
+  $: categoryPage = createAdminListPage(filteredCategories, page)
   $: pagedCategories = categoryPage.items
   $: displayCategories = sortMode ? localCategories : pagedCategories
+  $: selectedIds = new Set([...selectedIds].filter((id) => categories.some((category) => Number(category.id) === id)))
+  $: pageIds = pagedCategories.map((category) => Number(category.id))
+  $: pageSelectedCount = pageIds.filter((id) => selectedIds.has(id)).length
 
   function enterSort() {
     localCategories = createAdminSortDraft(categories)
+    search = ''
     page = 1
     sortMode = true
   }
+
+  function togglePageSelection(event: Event) {
+    const checked = (event.currentTarget as HTMLInputElement).checked
+    const next = new Set(selectedIds)
+    pageIds.forEach((id) => checked ? next.add(id) : next.delete(id))
+    selectedIds = next
+  }
+
+  function toggleCategorySelection(event: Event, id: number) {
+    const next = new Set(selectedIds)
+    if ((event.currentTarget as HTMLInputElement).checked) next.add(id)
+    else next.delete(id)
+    selectedIds = next
+  }
+  function handleSearchInput(event: Event) {
+    search = (event.currentTarget as HTMLInputElement).value
+    page = 1
+  }
+  function indeterminate(node: HTMLInputElement, value: boolean) { node.indeterminate = value; return { update(next: boolean) { node.indeterminate = next } } }
 
   function cancelSort() {
     sortMode = false
@@ -98,7 +126,7 @@
     <div class="admin-list-panel-header">
       <div>
         <p class="admin-panel-eyebrow">分类</p>
-        <h2>分类列表</h2>
+        <div class="admin-title-row"><h2>分类列表</h2><div class="admin-bookmark-search-bar"><input type="text" data-testid="admin-category-search" placeholder="搜索分类…" value={search} on:input={handleSearchInput} /></div></div>
       </div>
       <div class="admin-header-actions-row">
         {#if !sortMode}
@@ -107,13 +135,15 @@
             class="admin-ghost-button"
             data-testid="admin-category-sort-button"
             on:click={enterSort}
-            disabled={!isAuthenticated || categoriesLoading || authLoading || categories.length < 2}
+            disabled={!isAuthenticated || categoriesLoading || authLoading || categories.length < 2 || selectedIds.size > 0}
           >
             排序
           </button>
           <button type="button" class="admin-primary-button" data-testid="admin-create-category-button" on:click={() => onOpenCreateCategory?.()} disabled={!isAuthenticated}>
             新增分类
           </button>
+          <button type="button" class="admin-danger-button" on:click={() => onBatchDeleteCategories?.([...selectedIds])} disabled={!isAuthenticated || selectedIds.size === 0}>删除已选 ({selectedIds.size})</button>
+          {#if selectedIds.size > 0}<button type="button" class="admin-ghost-button" on:click={() => selectedIds = new Set()}>清除选择</button>{/if}
         {/if}
       </div>
     </div>
@@ -135,7 +165,14 @@
             </button>
           </div>
         </div>
+      {:else if filteredCategories.length === 0}
+        <div class="admin-empty-state">
+          <span class="admin-empty-state-icon">🔎</span>
+          <h3>没有匹配的分类</h3>
+          <p>请尝试其他搜索关键词。</p>
+        </div>
       {:else}
+        <label class="batch-select-all"><input type="checkbox" checked={pageSelectedCount === pageIds.length && pageIds.length > 0} use:indeterminate={pageSelectedCount > 0 && pageSelectedCount < pageIds.length} on:change={togglePageSelection} />全选当前页</label>
         <div
           class="admin-list-stack"
           class:is-sorting={sortMode}
@@ -146,6 +183,7 @@
         >
           {#each displayCategories as category (category.id)}
             <article class="admin-compact-card" class:sortable={sortMode} data-sortable-item data-sort-id={category.id}>
+              {#if !sortMode}<input type="checkbox" aria-label={`选择分类 ${category.title}`} checked={selectedIds.has(Number(category.id))} on:change={(event) => toggleCategorySelection(event, Number(category.id))} />{/if}
               {#if sortMode}
                 <span class="admin-drag-handle" aria-hidden="true">⋮⋮</span>
               {/if}
@@ -216,6 +254,33 @@
 <style>
   .admin-category-list-panel {
     grid-template-rows: auto minmax(0, auto) auto;
+  }
+
+  .admin-title-row { display: flex; align-items: center; gap: 14px; }
+
+  .admin-bookmark-search-bar {
+    width: min(280px, 32vw);
+  }
+
+  .admin-bookmark-search-bar input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 12px;
+    border: 1px solid var(--admin-input-border);
+    border-radius: 9px;
+    background: var(--admin-input-bg);
+    color: var(--admin-text);
+    font: inherit;
+  }
+
+  .admin-bookmark-search-bar input:focus {
+    outline: 2px solid color-mix(in srgb, var(--admin-accent) 32%, transparent);
+    outline-offset: 1px;
+  }
+
+  @media (max-width: 760px) {
+    .admin-title-row { align-items: flex-start; flex-direction: column; gap: 8px; }
+    .admin-bookmark-search-bar { width: min(100%, 360px); }
   }
 
   .admin-list-stack {

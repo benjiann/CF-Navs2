@@ -8,6 +8,10 @@
     getAdminCategoryTitle,
     getAdminListTotalPages,
     getAdminSortIds,
+    cycleAdminBookmarkSort,
+    sortAdminBookmarks,
+    type AdminBookmarkSortField,
+    type AdminBookmarkSortState,
     reorderAdminSortDraft,
   } from '../../lib/adminListState'
   import { getBookmarkFallbackIcon, getBookmarkIconUrl, hasBookmarkImageIcon } from '../../lib/bookmarkIconDisplay'
@@ -28,6 +32,7 @@
   export let onOpenCreateBookmark: ((categoryId?: string | number) => AsyncVoid) | undefined = undefined
   export let onEditBookmark: ((bookmark: AdminBookmark) => AsyncVoid) | undefined = undefined
   export let onDeleteBookmark: ((bookmark: AdminBookmark) => AsyncVoid) | undefined = undefined
+  export let onBatchDeleteBookmarks: ((ids: number[]) => AsyncVoid) | undefined = undefined
   export let onSortBookmarks: SortHandler | undefined = undefined
 
   let sortMode = false
@@ -35,23 +40,61 @@
   let savingSort = false
   let page = 1
   let search = ''
+  let selectedIds = new Set<number>()
+  let sortField: AdminBookmarkSortField | null = null
+  let sortDirection: AdminBookmarkSortState['direction'] = null
+  const sortColumns: Array<{ field: AdminBookmarkSortField; label: string }> = [
+    { field: 'title', label: '标题' }, { field: 'url', label: '链接' }, { field: 'category', label: '分类' }, { field: 'open_method', label: '打开方式' },
+  ]
 
-  $: filteredBookmarks = filterAdminBookmarks(bookmarks, categories, search)
+  $: filteredBookmarks = sortAdminBookmarks(filterAdminBookmarks(bookmarks, categories, search), { field: sortField, direction: sortDirection }, categories)
   $: totalPages = getAdminListTotalPages(filteredBookmarks.length)
   $: page = clampAdminListPage(page, totalPages)
   $: bookmarkPage = createAdminListPage(filteredBookmarks, page)
   $: pagedBookmarks = bookmarkPage.items
   $: displayBookmarks = sortMode ? localBookmarks : pagedBookmarks
+  $: selectedIds = new Set([...selectedIds].filter((id) => bookmarks.some((bookmark) => Number(bookmark.id) === id)))
+  $: pageIds = pagedBookmarks.map((bookmark) => Number(bookmark.id))
+  $: pageSelectedCount = pageIds.filter((id) => selectedIds.has(id)).length
 
   const getCategoryTitle = (categoryId: string | number) =>
     getAdminCategoryTitle(categories, categoryId)
 
   function enterSort() {
+    sortField = null
+    sortDirection = null
     search = ''
     page = 1
     localBookmarks = createAdminSortDraft(bookmarks)
     sortMode = true
   }
+
+  function toggleField(field: AdminBookmarkSortField) {
+    const next = cycleAdminBookmarkSort({ field: sortField, direction: sortDirection }, field)
+    sortField = next.field
+    sortDirection = next.direction
+    page = 1
+  }
+
+  function sortButtonLabel(field: AdminBookmarkSortField, label: string): string {
+    if (sortField !== field || sortDirection === null) return `${label}，当前未排序，点击按正序排列`
+    return sortDirection === 'asc' ? `${label}，当前正序，点击按倒序排列` : `${label}，当前倒序，点击取消排序`
+  }
+
+  function togglePageSelection(event: Event) {
+    const checked = (event.currentTarget as HTMLInputElement).checked
+    const next = new Set(selectedIds)
+    pageIds.forEach((id) => checked ? next.add(id) : next.delete(id))
+    selectedIds = next
+  }
+
+  function toggleBookmarkSelection(event: Event, id: number) {
+    const next = new Set(selectedIds)
+    if ((event.currentTarget as HTMLInputElement).checked) next.add(id)
+    else next.delete(id)
+    selectedIds = next
+  }
+  function indeterminate(node: HTMLInputElement, value: boolean) { node.indeterminate = value; return { update(next: boolean) { node.indeterminate = next } } }
 
   function cancelSort() {
     sortMode = false
@@ -88,17 +131,19 @@
     <div class="admin-list-panel-header">
       <div>
         <p class="admin-panel-eyebrow">书签</p>
-        <h2>书签列表</h2>
+        <div class="admin-title-row"><h2>书签列表</h2><div class="admin-bookmark-search-bar"><input type="text" data-testid="admin-bookmark-search" placeholder="搜索标题、链接或分类…" value={search} on:input={handleSearchInput} /></div></div>
       </div>
       <div class="admin-header-actions-row">
         <button
           type="button"
           class="admin-ghost-button"
           on:click={enterSort}
-          disabled={sortMode || !isAuthenticated || bookmarksLoading || authLoading || bookmarks.length < 2}
+          disabled={sortMode || !isAuthenticated || bookmarksLoading || authLoading || bookmarks.length < 2 || selectedIds.size > 0}
         >
           排序
         </button>
+        <button type="button" class="admin-danger-button" on:click={() => onBatchDeleteBookmarks?.([...selectedIds])} disabled={!isAuthenticated || selectedIds.size === 0}>删除已选 ({selectedIds.size})</button>
+        {#if selectedIds.size > 0}<button type="button" class="admin-ghost-button" on:click={() => selectedIds = new Set()}>清除选择</button>{/if}
         <button
           type="button"
           class="admin-primary-button"
@@ -108,20 +153,6 @@
           新增书签
         </button>
       </div>
-    </div>
-
-    <div class="admin-list-toolbar">
-      {#if !sortMode}
-        <div class="admin-bookmark-search-bar">
-          <input
-            type="text"
-            data-testid="admin-bookmark-search"
-            placeholder="搜索标题、链接或分类…"
-            value={search}
-            on:input={handleSearchInput}
-          />
-        </div>
-      {/if}
     </div>
 
     <div class="admin-panel-scroll-body admin-table-scroll-body">
@@ -149,20 +180,20 @@
         <div class="admin-table-wrap">
           <table class="admin-bookmark-table" class:is-sorting={sortMode}>
             <colgroup>
-              {#if sortMode}<col style="width: 44px;" />{/if}
-              <col />
-              <col style="width: 88px;" />
-              <col />
-              <col style="width: 114px;" />
+              <col style="width: 44px;" />
+              <col style="width: 30%;" />
+              <col style="width: 53%;" />
+              <col style="width: 5%;" />
+              <col style="width: 12%;" />
               {#if !sortMode}<col style="width: 122px;" />{/if}
             </colgroup>
             <thead>
               <tr>
+                {#if !sortMode}<th style="width: 44px;"><input type="checkbox" aria-label="全选当前页" checked={pageSelectedCount === pageIds.length && pageIds.length > 0} use:indeterminate={pageSelectedCount > 0 && pageSelectedCount < pageIds.length} on:change={togglePageSelection} /></th>{/if}
                 {#if sortMode}<th style="width: 44px;">排序</th>{/if}
-                <th>标题</th>
-                <th style="width: 88px;">分类</th>
-                <th>链接</th>
-                <th style="width: 114px;">打开方式</th>
+                {#each sortColumns as column}
+                  <th aria-sort={sortField === column.field ? (sortDirection === 'asc' ? 'ascending' : sortDirection === 'desc' ? 'descending' : 'none') : 'none'}><button type="button" class="sort-header-button" aria-label={sortButtonLabel(column.field, column.label)} on:click={() => toggleField(column.field)} disabled={sortMode}>{column.label}<svg viewBox="0 0 16 16" aria-hidden="true"><path d={sortField === column.field && sortDirection === 'asc' ? 'M8 3 4 7h3v6h2V7h3L8 3Z' : sortField === column.field && sortDirection === 'desc' ? 'm8 13 4-4H9V3H7v6H4l4 4Z' : 'm5 2-3 3h2v6h2V5h2L5 2Zm6 12 3-3h-2V5h-2v6H8l3 3Z'} /></svg></button></th>
+                {/each}
                 {#if !sortMode}<th style="width: 122px;">操作</th>{/if}
               </tr>
             </thead>
@@ -175,6 +206,7 @@
             >
               {#each displayBookmarks as bookmark (bookmark.id)}
                 <tr data-sortable-item data-sort-id={bookmark.id} class:is-sorting={sortMode}>
+                  {#if !sortMode}<td><input type="checkbox" aria-label={`选择书签 ${bookmark.title}`} checked={selectedIds.has(Number(bookmark.id))} on:change={(event) => toggleBookmarkSelection(event, Number(bookmark.id))} /></td>{/if}
                   {#if sortMode}
                     <td>
                       <button
@@ -213,10 +245,10 @@
                       </div>
                     </div>
                   </td>
-                  <td class="admin-cat-cell">{getCategoryTitle(bookmark.category_id)}</td>
                   <td class="admin-url-cell">
                     <a href={bookmark.url} target="_blank" rel="noreferrer">{bookmark.url}</a>
                   </td>
+                  <td class="admin-cat-cell">{getCategoryTitle(bookmark.category_id)}</td>
                   <td class="admin-method-cell">
                     {bookmark.open_method === 'same_tab' ? '当前标签页' : bookmark.open_method === 'modal' ? '当前页弹层' : '新标签页'}
                   </td>
@@ -283,9 +315,12 @@
 
 <style>
   .admin-bookmark-list-panel {
-    grid-template-rows: auto auto minmax(0, auto) auto;
+    height: min(760px, calc(100vh - 220px));
+    grid-template-rows: auto minmax(0, 1fr) auto;
     min-width: 0;
   }
+
+  .admin-title-row { display: flex; align-items: center; gap: 14px; }
 
   .admin-table-scroll-body {
     padding: 0;
@@ -303,6 +338,12 @@
 
   .admin-bookmark-search-bar {
     margin: 0;
+    width: min(360px, 32vw);
+  }
+
+  @media (max-width: 760px) {
+    .admin-title-row { align-items: flex-start; flex-direction: column; gap: 8px; }
+    .admin-bookmark-search-bar { width: min(100%, 360px); }
   }
 
   .admin-bookmark-search-bar input {
@@ -332,6 +373,7 @@
     width: 100%;
     min-width: 760px;
     border-collapse: collapse;
+    table-layout: fixed;
   }
 
   .admin-bookmark-table th,
@@ -353,6 +395,25 @@
     font-weight: 600;
   }
 
+  .sort-header-button {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 5px;
+  }
+
+  .sort-header-button svg { width: 14px; height: 14px; fill: currentColor; }
+
+  .sort-header-button:disabled {
+    cursor: not-allowed;
+  }
+
   .admin-bookmark-table tr.is-sorting {
     background: var(--admin-sort-highlight-bg);
   }
@@ -367,6 +428,8 @@
     display: flex;
     align-items: flex-start;
     gap: 12px;
+    justify-content: flex-start;
+    text-align: left;
   }
 
   .admin-bookmark-cell p {
@@ -380,8 +443,13 @@
     color: var(--admin-muted);
   }
 
+  .admin-cat-cell {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .admin-url-cell {
-    max-width: 260px;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

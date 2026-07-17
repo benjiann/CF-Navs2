@@ -6,11 +6,11 @@
   export let bookmarksCount = 0
   export let onSelect: ((tab: AdminTab) => void) | undefined = undefined
 
-  const items: Array<{ tab: AdminTab; icon: string; label: string; count?: () => number }> = [
-    { tab: 'categories', icon: '📁', label: '分类管理', count: () => categoriesCount },
-    { tab: 'bookmarks', icon: '🔖', label: '书签管理', count: () => bookmarksCount },
+  const items: Array<{ tab: AdminTab; icon: string; label: string }> = [
+    { tab: 'categories', icon: '📁', label: '分类管理' },
+    { tab: 'bookmarks', icon: '🔖', label: '书签管理' },
     { tab: 'settings', icon: '⚙️', label: '站点设置' },
-    { tab: 'backup', icon: '💾', label: '数据备份' },
+    { tab: 'backup', icon: '💾', label: '数据备份与导入' },
   ]
 </script>
 
@@ -25,8 +25,10 @@
     >
       <span class="nav-icon">{item.icon}</span>
       <span class="nav-label">{item.label}</span>
-      {#if item.count}
-        <span class="nav-badge">{item.count()}</span>
+      {#if item.tab === 'categories'}
+        <span class="nav-badge">{categoriesCount}</span>
+      {:else if item.tab === 'bookmarks'}
+        <span class="nav-badge">{bookmarksCount}</span>
       {/if}
     </button>
   {/each}

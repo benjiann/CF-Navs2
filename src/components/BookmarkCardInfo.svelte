@@ -1,6 +1,7 @@
 <script lang="ts">
-  import type { PublicBookmark } from '../../shared/types'
+  import type { DescriptionDisplayMode, PublicBookmark } from '../../shared/types'
   import BookmarkIcon from './BookmarkIcon.svelte'
+  import './bookmarkCardTooltip.css'
 
   type AsyncVoid<T = void> = T | Promise<T>
 
@@ -9,6 +10,8 @@
   export let sortMode = false
   export let cardLinkStyle = ''
   export let showDescription = true
+  export let descriptionMode: DescriptionDisplayMode = showDescription ? 'always' : 'hidden'
+  export let tooltipText = ''
   export let iconUrl = ''
   export let iconText = ''
   export let infoIconSize = 60
@@ -30,11 +33,15 @@
 
 <a
   class="bookmark-card bookmark-card-info"
+  class:bookmark-tooltip-anchor={showDescription && descriptionMode === 'hover' && Boolean(bookmark.description)}
   class:sort-mode={sortMode}
   href={bookmark.url}
   target={openInNewTab ? '_blank' : undefined}
   rel={openInNewTab ? 'noopener noreferrer' : undefined}
   style={cardLinkStyle}
+  title={showDescription && descriptionMode === 'hover' ? tooltipText : undefined}
+  aria-label={showDescription && descriptionMode === 'hover' ? tooltipText : undefined}
+  data-tooltip={showDescription && descriptionMode === 'hover' ? tooltipText : ''}
   on:click={handleLinkClick}
   on:contextmenu={handleContextMenu}
 >
@@ -52,7 +59,7 @@
 
   <div class="bookmark-text">
     <h3 class="bookmark-title">{bookmark.title}</h3>
-    {#if showDescription && bookmark.description}
+      {#if showDescription && descriptionMode === 'always' && bookmark.description}
       <p class="bookmark-description">{bookmark.description}</p>
     {/if}
   </div>
@@ -79,6 +86,7 @@
   }
 
   .bookmark-card-info {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 0.82rem;
@@ -86,7 +94,7 @@
     height: 70px;
     padding: 0 0.95rem 0 0.55rem;
     border-radius: 1.2rem;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .bookmark-card-info:hover {
@@ -129,6 +137,8 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     line-height: 1.2;
+    min-height: 0.9em;
+    transition: opacity 0.16s ease, transform 0.16s ease;
   }
 
   .bookmark-card-info.sort-mode {
@@ -165,4 +175,5 @@
     color: var(--card-text-color, #cbd5e1);
     opacity: 0.92;
   }
+
 </style>

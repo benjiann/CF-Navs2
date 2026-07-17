@@ -33,11 +33,11 @@
     </tr>
     <tr>
       <td width="190">🧭 <strong>清爽首页</strong></td>
-      <td>分类分区、响应式布局；导航可配置为左侧或顶部，支持桌面常显、横向滚动和移动端触摸滑动；详情/极简两种卡片样式</td>
+      <td>分类分区、响应式布局；导航可配置为左侧或顶部，支持桌面常显、横向滚动和移动端触摸滑动；详情/极简两种卡片样式，描述可始终显示、悬停提示或隐藏</td>
     </tr>
     <tr>
       <td width="190">🛠️ <strong>顺手管理</strong></td>
-      <td>分类和书签支持新增、编辑、删除、搜索、分页和拖拽排序</td>
+      <td>分类和书签支持新增、编辑、跨页批量删除、搜索、分页和拖拽排序；后台书签列表支持本地字段排序</td>
     </tr>
     <tr>
       <td width="190">🎨 <strong>图标省心</strong></td>
@@ -53,7 +53,7 @@
     </tr>
     <tr>
       <td width="190">💾 <strong>数据可控</strong></td>
-      <td>支持 JSON 导出、导入、恢复；兼容 Sun-Panel 数据迁移</td>
+      <td>支持 JSON 导出、导入、恢复；兼容 Sun-Panel 数据迁移和浏览器标准书签 HTML，可追加合并或覆盖</td>
     </tr>
     <tr>
       <td width="190">🔐 <strong>安全可靠</strong></td>
@@ -77,22 +77,18 @@
 <table>
   <tr>
     <td align="center" width="50%">
-      <strong>桌面端亮色</strong><br>
-      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-light.jpg" alt="桌面端亮色" width="420">
+      <strong>默认主题 · 深海蔚蓝亮色</strong><br>
+      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-light.jpg" alt="深海蔚蓝亮色桌面首页" width="420">
     </td>
     <td align="center" width="50%">
-      <strong>桌面端暗色</strong><br>
-      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-dark.jpg" alt="桌面端暗色" width="420">
+      <strong>深海蔚蓝暗色</strong><br>
+      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-dark.jpg" alt="深海蔚蓝暗色桌面首页" width="420">
     </td>
   </tr>
   <tr>
-    <td align="center" width="50%">
-      <strong>分类视图</strong><br>
-      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-tag.jpg" alt="分类视图" width="420">
-    </td>
-    <td align="center" width="50%">
-      <strong>小卡片样式</strong><br>
-      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-bookmark-small.jpg" alt="小卡片样式" width="420">
+    <td align="center" colspan="2">
+      <strong>13 套内置主题模板 · 亮暗双背景 · 一键套用推荐参数</strong><br>
+      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-admin-setting.jpg" alt="13 套内置主题模板和亮暗背景设置" width="860">
     </td>
   </tr>
   <tr>
@@ -107,43 +103,51 @@
   </tr>
   <tr>
     <td align="center" width="50%">
-      <strong>浏览器网络耗时</strong><br>
-      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-loadtime.jpg" alt="浏览器网络耗时" width="420">
+      <strong>首次运行安装器</strong><br>
+      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-loading.jpg" alt="首次运行安装器" width="420">
     </td>
     <td align="center" width="50%">
-      <strong>首次加载过渡动画</strong><br>
-      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-loading.jpg" alt="首次加载过渡动画" width="420">
+      <strong>分类视图</strong><br>
+      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-tag.jpg" alt="分类视图" width="420">
     </td>
   </tr>
   <tr>
+    <td align="center" width="50%">
+      <strong>小卡片样式</strong><br>
+      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-bookmark-small.jpg" alt="小卡片样式" width="420">
+    </td>
     <td align="center" width="50%">
       <strong>书签编辑弹窗</strong><br>
       <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-bookmarkedit.jpg" alt="书签编辑弹窗" width="420">
     </td>
+  </tr>
+  <tr>
     <td align="center" width="50%">
       <strong>后台分类管理</strong><br>
       <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-admin-tag.jpg" alt="后台分类管理" width="420">
     </td>
-  </tr>
-  <tr>
     <td align="center" width="50%">
       <strong>后台书签管理</strong><br>
       <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-admin-bookmark.jpg" alt="后台书签管理" width="420">
     </td>
-    <td align="center" width="50%">
-      <strong>后台设置</strong><br>
-      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-admin-setting.jpg" alt="后台设置" width="420">
-    </td>
   </tr>
   <tr>
-    <td align="center" colspan="2">
+    <td align="center" width="50%">
+      <strong>浏览器网络耗时</strong><br>
+      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-loadtime.jpg" alt="浏览器网络耗时" width="420">
+    </td>
+    <td align="center" width="50%">
       <strong>后台备份</strong><br>
       <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-backup.jpg" alt="后台备份" width="420">
     </td>
   </tr>
 </table>
 
-> 💡 支持亮色/暗色/跟随系统三种主题模式，桌面端和移动端自适应。
+> 🎨 内置 13 套跨色系模板，每套同时提供亮色与暗色背景，并自动带入推荐的遮罩、卡片透明度和文字参数；仍可分别改成纯色、渐变或图片背景。
+>
+> 🌊 新安装站点默认启用「深海蔚蓝」亮色模式；前台仍可临时切换亮色、暗色或跟随系统，不会改写后台保存的主题配置。
+>
+> 🧩 首次部署通过 `/install` 引导校验绑定、创建数据库结构和管理员账号，完成后直接进入已登录状态。
 >
 > 🧭 后台「站点设置 → 布局与导航」可选择左侧或顶部布局。桌面左侧模式可开启常显并手动收缩；顶部模式固定悬浮，分类溢出时支持箭头、鼠标拖动和移动端触摸滑动。
 
@@ -196,15 +200,14 @@ npm run deploy
 npx wrangler deploy
 ```
 
-4. 在环境变量/Secrets 步骤中只需添加一个**加密 Secret**（不要保存为普通明文变量）：
+4. 保存并部署。Cloudflare 的 Git 引导流程会根据 `wrangler.toml` 中不带 ID 的声明创建并绑定 `DB` D1 数据库与 `SESSION` KV 命名空间。待部署完成后，进入该 Worker 的 **设置 → 变量和密钥**，添加一个类型为**密钥**的变量，变量名填写 `SETUP_TOKEN`，值填写一段足够长且随机的字符串。
 
-```text
-SETUP_TOKEN = 一段足够长且随机的安装令牌
-```
+<p align="center">
+  <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-deploy3.jpg" alt="在 Cloudflare Worker 中添加 SETUP_TOKEN 密钥" width="100%">
+</p>
 
-5. 保存并部署。Cloudflare 的 Git 引导流程会根据 `wrangler.toml` 中不带 ID 的声明创建并绑定 `DB` D1 数据库与 `SESSION` KV 命名空间。
-6. 打开部署后的 Workers URL，并访问 `/install`。输入 `SETUP_TOKEN`，再设置管理员用户名和密码；安装器会初始化数据库 schema 和管理员账号。
-7. 安装完成后进入登录页。确认管理员可以登录后，可在 **Settings → Variables & Secrets** 删除 `SETUP_TOKEN`，或轮换为新的随机值；公开安装状态检查不依赖该 Secret，已完成的安装也会永久拒绝再次初始化。无需创建 Cloudflare API Token、配置 GitHub Actions，正常流程也无需手动执行 SQL。
+5. 打开部署后的 Workers URL，并访问 `/install`。输入 `SETUP_TOKEN`，再设置管理员用户名和密码；安装器会初始化数据库 schema 和管理员账号。
+6. 进入该 Worker 的 **域和路由** 页面，关闭两个 Workers URL，然后添加并启用你的自定义域名。
 
 > 如果 `/install` 无法完成 schema 初始化，才使用 D1 SQL Console 手动执行 [schema.sql](schema.sql) 作为恢复手段；不要把手动 SQL 当作正常安装步骤。
 

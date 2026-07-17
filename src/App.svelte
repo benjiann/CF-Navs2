@@ -26,6 +26,7 @@
   } from './lib/appImportExport'
   import {
     createConfirmDialogState,
+    createBatchDeleteConfirmation,
     createDeleteBookmarkConfirmation,
     createDeleteCategoryConfirmation,
     type ConfirmDialogInput,
@@ -84,6 +85,11 @@
   let installState: InstallScreenState = { type: 'checking' }
   let rootError = ''
   let currentView: AppView = 'home'
+
+  function isAdminPath(): boolean {
+    if (typeof window === 'undefined') return false
+    return window.location.pathname === '/admin' || window.location.pathname === '/admin/'
+  }
   let AdminComponent: typeof import('./views/Admin.svelte').default | null = null
   let LoginModalComponent: typeof import('./components/LoginModal.svelte').default | null = null
   let BookmarkEditModalComponent: typeof import('./components/BookmarkEditModal.svelte').default | null = null
@@ -264,6 +270,15 @@
     }
   }
 
+  async function refreshAdminDataAfterMutation(): Promise<void> {
+    try {
+      await refreshLoggedInData(true)
+    } catch (error) {
+      // 写入已经成功；刷新失败时保留本地即时结果，并提示用户稍后重试。
+      rootError = getErrorMessage(error)
+    }
+  }
+
   function getInstallHintStorage(): Storage | null {
     if (typeof window === 'undefined') return null
 
@@ -394,7 +409,13 @@
       await ensureLoginModalComponent()
     }
     loginModalOpen = homeGate.loginModalOpen
-    currentView = homeGate.view
+    if (isAdminPath() && isLoggedIn()) {
+      await ensureAdminComponent()
+      currentView = 'admin'
+      loginModalOpen = false
+    } else {
+      currentView = homeGate.view
+    }
     booting = false
   }
 
@@ -465,6 +486,7 @@
     }
 
     await ensureAdminComponent()
+    replaceBrowserPath('/admin')
     currentView = 'admin'
   }
 
@@ -474,7 +496,12 @@
       loginModalOpen = false
       rootError = ''
       await refreshLoggedInData(true)
-      currentView = 'home'
+      if (isAdminPath()) {
+        await ensureAdminComponent()
+        currentView = 'admin'
+      } else {
+        currentView = 'home'
+      }
     } catch {
       // authStore 已经记录错误
     }
@@ -554,6 +581,7 @@
 
      resetCategoryState()
      await applyLocalCategoryUpsert(category)
+      await refreshAdminDataAfterMutation()
       toastStore.addToast(
         categoryModalMode === 'edit' ? `分类「${category.title}」已更新` : `分类「${category.title}」已创建`,
         'success',
@@ -573,9 +601,10 @@
     categoryError = ''
 
     try {
-      const categoryId = Number(category.id)
-      await api.categories.remove(categoryId)
+     const categoryId = Number(category.id)
+     await api.categories.remove(categoryId)
      await applyLocalCategoryDelete(categoryId)
+      await refreshAdminDataAfterMutation()
       toastStore.addToast(`分类「${category.title}」已删除`, 'success')
    } catch (error) {
      categoryError = getErrorMessage(error)
@@ -644,6 +673,7 @@
 
       resetBookmarkState()
       await applyLocalBookmarkUpsert(bookmark)
+      await refreshAdminDataAfterMutation()
      refreshBookmarkIconCacheInBackground(bookmark.id)
       toastStore.addToast(
         bookmarkModalMode === 'edit' ? `书签「${bookmark.title}」已更新` : `书签「${bookmark.title}」已创建`,
@@ -668,11 +698,37 @@
       await api.bookmarks.remove(bookmarkId)
       resetBookmarkState()
      await applyLocalBookmarkDelete(bookmarkId)
+     await refreshAdminDataAfterMutation()
       toastStore.addToast(`书签「${bookmark.title}」已删除`, 'success')
    } catch (error) {
      bookmarkError = getErrorMessage(error)
     } finally {
       deletingBookmarkId = null
+    }
+  }
+
+  async function handleBatchDeleteBookmarks(ids: number[]): Promise<void> {
+    if (ids.length === 0) return
+    if (!await requestConfirmation(createBatchDeleteConfirmation('bookmark', ids.length))) return
+    try {
+      const result = await api.bookmarks.batchDelete(ids)
+      if (result.deleted > 0) await refreshAdminDataAfterMutation()
+      toastStore.addToast(`已删除 ${result.deleted} 个书签`, 'success')
+    } catch (error) {
+      bookmarkError = getErrorMessage(error)
+    }
+  }
+
+  async function handleBatchDeleteCategories(ids: number[]): Promise<void> {
+    if (ids.length === 0) return
+    const bookmarkCount = adminData.bookmarks.filter((bookmark) => ids.includes(bookmark.category_id)).length
+    if (!await requestConfirmation(createBatchDeleteConfirmation('category', ids.length, bookmarkCount))) return
+    try {
+      const result = await api.categories.batchDelete(ids)
+      if (result.deleted > 0 || result.deleted_bookmarks > 0) await refreshAdminDataAfterMutation()
+      toastStore.addToast(`已删除 ${result.deleted} 个分类及 ${result.deleted_bookmarks} 个书签`, 'success')
+    } catch (error) {
+      categoryError = getErrorMessage(error)
     }
   }
 
@@ -714,6 +770,7 @@
       applyLocalSort: (sortedIds) => applyLocalCategorySort(sortedIds, false),
       saveRemoteSort: (sortedIds) => api.categories.sort(sortedIds),
       persist: persistCurrentAdminData,
+      onSuccess: refreshAdminDataAfterMutation,
       restoreOnError: () => refreshLoggedInData(true),
       onError: (error) => {
         categoryError = getErrorMessage(error)
@@ -728,6 +785,7 @@
       applyLocalSort: (sortedIds) => applyLocalBookmarkSort(sortedIds, false),
       saveRemoteSort: (sortedIds) => api.bookmarks.sort(sortedIds),
       persist: persistCurrentAdminData,
+      onSuccess: refreshAdminDataAfterMutation,
       restoreOnError: () => refreshLoggedInData(true),
       onError: (error) => {
         bookmarkError = getErrorMessage(error)
@@ -749,13 +807,16 @@
     exportDataToFile(importExportState, adminData)
   }
 
-  async function handleImportData(file: File, source: ImportSource): Promise<void> {
-    await importDataFromFile(importExportState, file, source, {
+  async function handleImportData(file: File, source: ImportSource, mode: 'replace' | 'merge'): Promise<void> {
+    await importDataFromFile(importExportState, file, source, mode, {
       adminData,
       requestConfirmation,
-      applyLoggedInData,
+      applyLoggedInData: (data) => applyLoggedInData(data),
       persistCurrentAdminData,
     })
+    if (!importExportState.backupError && importExportState.backupMessage) {
+      await refreshAdminDataAfterMutation()
+    }
   }
 
   onMount(() => {
@@ -872,15 +933,17 @@
         canSeeHome={canSeeHome}
         onOpenLogin={handleOpenLogin}
         onLogout={handleLogout}
-        onSwitchToHome={() => { currentView = 'home' }}
+      onSwitchToHome={() => { replaceBrowserPath('/'); currentView = 'home' }}
         onOpenCreateCategory={handleOpenCreateCategory}
         onEditCategory={handleEditCategory}
         onDeleteCategory={handleDeleteCategory}
+        onBatchDeleteCategories={handleBatchDeleteCategories}
         onCloseCategoryModal={handleCloseCategoryModal}
         onSubmitCategory={handleSubmitCategory}
         onOpenCreateBookmark={handleOpenCreateBookmark}
         onEditBookmark={handleEditBookmark}
         onDeleteBookmark={handleDeleteBookmark}
+        onBatchDeleteBookmarks={handleBatchDeleteBookmarks}
         onSubmitSettings={handleSubmitSettings}
         onChangePassword={handleChangePassword}
         onSortCategories={handleSortCategories}

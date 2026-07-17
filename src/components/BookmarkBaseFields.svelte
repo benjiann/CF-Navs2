@@ -11,6 +11,7 @@
   export let url = ''
   export let openMethod: BookmarkFormValue['open_method'] = 'new_tab'
   export let description = ''
+  export let descriptionMode: BookmarkFormValue['description_mode'] = 'inherit'
   export let categories: BookmarkCategoryOption[] = []
   export let loading = false
 </script>
@@ -47,9 +48,19 @@
   </select>
 </label>
 
-<label class="field-wide">
+<label class="field-compact">
   <span>描述</span>
   <textarea bind:value={description} rows="3" placeholder="补充说明，可选"></textarea>
+</label>
+
+<label class="field-compact">
+  <span>描述显示</span>
+  <select bind:value={descriptionMode}>
+    <option value="inherit">跟随全局</option>
+    <option value="always">始终显示</option>
+    <option value="hover">悬停显示</option>
+    <option value="hidden">隐藏</option>
+  </select>
 </label>
 
 <style>
@@ -59,10 +70,6 @@
     gap: 4px;
     color: #334155;
     font-size: 13px;
-  }
-
-  .field-wide {
-    grid-column: 1 / -1;
   }
 
   .field-compact {
@@ -102,8 +109,7 @@
   }
 
   @media (max-width: 500px) {
-    .field-compact,
-    .field-wide {
+    .field-compact {
       grid-column: 1 / -1;
     }
   }

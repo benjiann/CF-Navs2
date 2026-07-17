@@ -5,6 +5,7 @@ import {
   createAdminListPage,
   createAdminSortDraft,
   filterAdminBookmarks,
+  filterAdminCategories,
   getAdminCategoryBookmarkCount,
   getAdminCategoryTitle,
   getAdminListTotalPages,
@@ -51,6 +52,11 @@ describe('admin list state helpers', () => {
 
   it('keeps blank bookmark search as the original list', () => {
     expect(filterAdminBookmarks(bookmarks, categories, '   ')).toBe(bookmarks)
+  })
+
+  it('filters categories by title and keeps blank search as the original list', () => {
+    expect(filterAdminCategories(categories, ' doc ')).toEqual([categories[1]])
+    expect(filterAdminCategories(categories, '   ')).toBe(categories)
   })
 
   it('derives category titles and count fallback values', () => {
