@@ -12,6 +12,10 @@ export type ThemeGradientPreset = {
   cardBackgroundOpacity: number
   cardTextColor: string
   siteTitleColor: string
+  surface: 'glass' | 'flat'
+  accentColor: string
+  darkAccentColor: string
+  darkCardBackgroundColor: string
 }
 
 const clearTealLightGradient = [
@@ -220,10 +224,33 @@ function createGradientPreset(
     cardBackgroundOpacity: style.cardBackgroundOpacity,
     cardTextColor: '',
     siteTitleColor: '',
+    surface: 'glass',
+    accentColor: '#2563eb',
+    darkAccentColor: '#7dd3fc',
+    darkCardBackgroundColor: '#0f172a',
+  }
+}
+
+function createFlatPreset(id: GradientPresetId, label: string, description: string, colors: { page: string; darkPage: string; card: string; darkCard: string; accent: string; darkAccent: string }): ThemeGradientPreset {
+  return {
+    id, label, description,
+    light: { type: 'color', value: colors.page, blur: 0, mask: 0, maskColor: '#ffffff' },
+    dark: { type: 'color', value: colors.darkPage, blur: 0, mask: 0, maskColor: '#000000' },
+    cardBackgroundColor: colors.card, cardBackgroundOpacity: 1, cardTextColor: '', siteTitleColor: '', surface: 'flat',
+    accentColor: colors.accent, darkAccentColor: colors.darkAccent, darkCardBackgroundColor: colors.darkCard,
   }
 }
 
 export const gradientPresets: ThemeGradientPreset[] = [
+  createFlatPreset('paper-sage', '纸页鼠尾草', '暖白纸张与鼠尾草绿，安静自然。', { page: '#fdfcf9', darkPage: '#20261f', card: '#ffffff', darkCard: '#2b332a', accent: '#71836f', darkAccent: '#a9c2a0' }),
+  createFlatPreset('paper-clay', '温暖陶土', '淡陶土与暖灰，柔和而有人情味。', { page: '#fcf9f8', darkPage: '#2a211f', card: '#ffffff', darkCard: '#372b28', accent: '#b08f89', darkAccent: '#d4b1aa' }),
+  createFlatPreset('paper-wheat', '澄澈秋麦', '奶油纸色与麦穗金，温暖但不过亮。', { page: '#faf8f5', darkPage: '#29251d', card: '#ffffff', darkCard: '#373126', accent: '#a98c65', darkAccent: '#d1b894' }),
+  createFlatPreset('paper-slate', '静谧海岩', '清浅海岩蓝灰，适合长时间浏览。', { page: '#f5f8fa', darkPage: '#20272b', card: '#ffffff', darkCard: '#2b3439', accent: '#718a98', darkAccent: '#a8bac4' }),
+  createFlatPreset('paper-pine', '森林深处', '低饱和松林绿，沉稳专注。', { page: '#f8faf6', darkPage: '#1d241c', card: '#ffffff', darkCard: '#283126', accent: '#5c6857', darkAccent: '#a9b8a3' }),
+  createFlatPreset('paper-sakura', '樱落粉黛', '克制的樱粉与暖灰，轻柔不甜腻。', { page: '#fcf7f9', darkPage: '#2b2024', card: '#ffffff', darkCard: '#382a2f', accent: '#c88797', darkAccent: '#e4b2be' }),
+  createFlatPreset('paper-lavender', '静谧薰衣', '灰紫与雾白构成的低刺激色系。', { page: '#f7f6fb', darkPage: '#25222e', card: '#ffffff', darkCard: '#312d3c', accent: '#857bb8', darkAccent: '#bdb5df' }),
+  createFlatPreset('paper-indigo', '深海墨蓝', '偏灰的墨蓝强调色，清晰理性。', { page: '#f4f6f9', darkPage: '#1d222a', card: '#ffffff', darkCard: '#282f39', accent: '#5f769b', darkAccent: '#9eb2d0' }),
+  createFlatPreset('paper-amber', '晨光琥珀', '暖白与柔和琥珀，明亮且舒适。', { page: '#faf8f3', darkPage: '#29241b', card: '#ffffff', darkCard: '#373024', accent: '#bd8b42', darkAccent: '#e3c188' }),
   createGradientPreset('clear-teal', '清透蓝绿', '清爽的蓝绿冷调，玻璃卡片映出水色高光。', clearTealLightGradient, clearTealDarkGradient, { lightMask: 0.06, darkMask: 0.12, cardBackgroundOpacity: 0.42 }),
   createGradientPreset('mist-slate', '晨雾石青', '石青与浅绿的柔和薄雾，安静而不寡淡。', mistSlateLightGradient, mistSlateDarkGradient, { lightMask: 0.08, darkMask: 0.14, cardBackgroundOpacity: 0.42 }),
   createGradientPreset('coral-sky', '珊瑚晴空', '珊瑚、天空蓝和薄荷绿的轻快组合，明亮有活力。', coralSkyLightGradient, coralSkyDarkGradient, { lightMask: 0.06, darkMask: 0.14, cardBackgroundOpacity: 0.44 }),

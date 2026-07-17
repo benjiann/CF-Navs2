@@ -29,7 +29,7 @@ describe('admin settings layout', () => {
     expect(source).toContain("disabled={saving || form.navigation.position !== 'left'}")
   })
 
-  it('orders settings sections and exposes anchors for the section nav', () => {
+  it('groups settings sections behind a secondary settings menu', () => {
     const panel = readFileSync('src/components/SettingsPanel.svelte', 'utf8')
 
     const sectionOrder = [
@@ -44,10 +44,11 @@ describe('admin settings layout', () => {
     ]
     const positions = sectionOrder.map((marker) => panel.indexOf(marker))
     expect(positions.every((position) => position >= 0)).toBe(true)
-    expect([...positions].sort((a, b) => a - b)).toEqual(positions)
+    expect(new Set(positions).size).toBe(sectionOrder.length)
 
-    expect(panel).toContain("id: 'settings-section-appearance'")
-    expect(panel).toContain('scrollToSection')
+    expect(panel).toContain("{ id: 'appearance', label: '外观与卡片'")
+    expect(panel).toContain('class="settings-submenu"')
+    expect(panel).not.toContain('group::before')
   })
 
   it('keeps content layout fields in the layout section and search toggles in the hero section', () => {

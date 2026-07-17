@@ -217,6 +217,22 @@
     font: inherit;
   }
 
+  :global(html[data-background-preset^='paper-']) :is(.search-input, .search-select, .engine-icon-button, .engine-menu) {
+    border-color: color-mix(in srgb, var(--home-accent-color) 24%, transparent);
+    background: rgb(var(--card-bg-rgb));
+    backdrop-filter: none;
+  }
+
+  :global(html[data-background-preset^='paper-']) .search-button {
+    background: var(--home-accent-color);
+  }
+
+  :global(html[data-theme='dark'][data-background-preset^='paper-']) :is(.search-input, .search-select, .engine-icon-button, .engine-menu) {
+    border-color: color-mix(in srgb, var(--home-accent-color) 24%, transparent);
+    background: rgb(var(--card-bg-rgb));
+    color: #e5eee2;
+  }
+
   .engine-icon-button {
     width: 100%;
     height: 100%;

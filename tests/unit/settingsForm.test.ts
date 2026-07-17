@@ -13,12 +13,15 @@ import {
 
 describe('settings form model', () => {
   it('keeps every built-in background preset available through the shared preset contract', () => {
-    expect(gradientPresets).toHaveLength(13)
+    expect(gradientPresets).toHaveLength(22)
     expect(gradientPresets.map((preset) => preset.id)).toEqual([
+      'paper-sage', 'paper-clay', 'paper-wheat', 'paper-slate', 'paper-pine', 'paper-sakura', 'paper-lavender', 'paper-indigo', 'paper-amber',
       'clear-teal', 'mist-slate', 'coral-sky', 'sage-graphite', 'lumen-amber', 'ember-night',
       'violet-dawn', 'ocean-depths', 'aurora-borealis', 'citrus-sunset', 'rose-orbit',
       'indigo-noir', 'terracotta-dune',
     ])
+    expect(gradientPresets.find((preset) => preset.id === 'paper-sage')?.surface).toBe('flat')
+    expect(gradientPresets.filter((preset) => preset.surface === 'glass')).toHaveLength(13)
   })
 
   it('creates a complete editable form from partial settings', () => {

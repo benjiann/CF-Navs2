@@ -66,7 +66,7 @@
 
 <fieldset id="settings-section-appearance" class="group group-wide group-background" disabled={saving}>
   <legend>外观主题</legend>
-  <p class="group-desc">先选主题模式，再挑一套配色方案；也可以分别自定义浅色和深色背景。</p>
+    <p class="group-desc">先选主题模式，再选择毛玻璃氛围或护眼纯色配色；也可以分别自定义浅色和深色背景。</p>
 
   <div class="theme-mode-row">
     <div class="field theme-mode-field">
