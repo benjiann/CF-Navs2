@@ -1,313 +1,232 @@
-# CF-Navs
+<div align="center">
+  <img src="public/icon.png" alt="CF-Navs 项目图标" width="112" height="112">
+  <h1>CF-Navs</h1>
+  <p>运行在 Cloudflare Workers 上的轻量个人导航面板</p>
+  <p>在一个清爽、响应式的界面中管理分类、书签、主题、搜索服务与数据备份。</p>
 
-> 🚀 一个运行在 Cloudflare Workers 上的轻量个人导航面板——前台展示常用站点，后台管理分类、书签、主题、搜索引擎和数据备份。
+  <p>
+    <img src="https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white" alt="Cloudflare Workers">
+    <img src="https://img.shields.io/badge/Svelte-4-FF3E00?logo=svelte&logoColor=white" alt="Svelte 4">
+    <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" alt="TypeScript 5">
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-2563EB" alt="MIT License"></a>
+  </p>
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-orange.svg)
-![Svelte](https://img.shields.io/badge/Svelte-4-ff3e00.svg)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6.svg)
+  <p>
+    <a href="#功能">功能</a> ·
+    <a href="#界面预览">界面预览</a> ·
+    <a href="#快速部署">快速部署</a> ·
+    <a href="#本地开发">本地开发</a> ·
+    <a href="docs/README.md">项目文档</a>
+  </p>
 
-[![Fork on GitHub](https://img.shields.io/badge/Fork%20on%20GitHub-181717?logo=github&logoColor=white)](https://github.com/lbjxr/CF-Navs/fork)
-
-[核心特性](#-核心特性) • [效果预览](#-效果预览) • [快速部署](#-快速部署) • [项目文档](docs/README.md) • [本地开发](#-本地开发) • [环境变量说明](#-环境变量说明) • [贡献](#-贡献) • [致谢](#-致谢)
-
----
-
-## ✨ 核心特性
-
-<table>
-  <colgroup>
-    <col width="190">
-    <col>
-  </colgroup>
-  <thead>
-    <tr>
-      <th align="left">特性</th>
-      <th align="left">说明</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td width="190">☁️ <strong>轻量部署</strong></td>
-      <td>全栈运行在 Cloudflare Workers + D1 + KV，无需自建服务器</td>
-    </tr>
-    <tr>
-      <td width="190">🧭 <strong>清爽首页</strong></td>
-      <td>分类分区、响应式布局；导航可配置为左侧或顶部，支持桌面常显、横向滚动和移动端触摸滑动；详情/极简两种卡片样式，描述可始终显示、悬停提示或隐藏</td>
-    </tr>
-    <tr>
-      <td width="190">🛠️ <strong>顺手管理</strong></td>
-      <td>分类和书签支持新增、编辑、跨页批量删除、搜索、分页和拖拽排序；后台书签列表支持本地字段排序</td>
-    </tr>
-    <tr>
-      <td width="190">🎨 <strong>图标省心</strong></td>
-      <td>支持 favicon、文字图标、Iconify、自定义图片 URL、文字或表情；首页优先使用聚合数据和浏览器本地缓存展示图标</td>
-    </tr>
-    <tr>
-      <td width="190">🌓 <strong>主题完整</strong></td>
-      <td>亮色、暗色、跟随系统；内置 13 套毛玻璃渐变和 9 套护眼纯色方案，保存选中状态；渐变方案使用半透明玻璃卡片，护眼方案使用综合色相更明确的纯色背景、同色系浅卡片和可调透明度，背景、遮罩、卡片尺寸和图标大小都可配置</td>
-    </tr>
-    <tr>
-      <td width="190">🔎 <strong>搜索实用</strong></td>
-      <td>首页输入直接筛选本地书签（匹配标题、描述、URL 和分类），也可切换外部搜索引擎</td>
-    </tr>
-    <tr>
-      <td width="190">💾 <strong>数据可控</strong></td>
-      <td>支持 JSON 导出、导入、恢复；兼容 Sun-Panel 数据迁移和浏览器标准书签 HTML，可追加合并或覆盖</td>
-    </tr>
-    <tr>
-      <td width="190">🔐 <strong>安全可靠</strong></td>
-      <td>密码 PBKDF2 哈希存储、HttpOnly Session Cookie、CSRF 防护；登录失败限流、默认 7 天会话有效期</td>
-    </tr>
-    <tr>
-      <td width="190">📱 <strong>PWA 支持</strong></td>
-      <td>生产构建提供基础 PWA app shell，Service Worker 离线回退</td>
-    </tr>
-    <tr>
-      <td width="190">⚡ <strong>极致加载</strong></td>
-      <td>边缘缓存、图标懒加载、代码分割、聚合数据批量读取、浏览器本地快照增量更新，畅享本地化的速度感</td>
-    </tr>
-  </tbody>
-</table>
+  <a href="https://github.com/lbjxr/CF-Navs/fork">
+    <img src="https://img.shields.io/badge/Fork_on_GitHub-181717?logo=github&logoColor=white" alt="Fork on GitHub">
+  </a>
+</div>
 
 ---
 
-## 🖼️ 效果预览
+## 功能
+
+| | 能力 | 说明 |
+|---|---|---|
+| ☁️ | 边缘全栈 | 前端、API、D1 数据库与 KV 会话均运行在 Cloudflare，无需自建服务器 |
+| 🧭 | 导航首页 | 分类分区、书签搜索、响应式布局，以及可切换的左侧或顶部导航 |
+| 🛠️ | 后台管理 | 分类和书签的新增、编辑、搜索、分页、批量删除与拖拽排序 |
+| 🎨 | 外观定制 | 22 套内置主题、亮暗模式、背景、遮罩、卡片尺寸、透明度与图标大小设置 |
+| 🔎 | 搜索与图标 | 本地书签筛选、外部搜索引擎，以及 Favicon、Iconify、图片、文字和表情图标 |
+| 💾 | 数据迁移 | JSON 备份与恢复，支持 Sun-Panel 数据和浏览器书签 HTML 导入 |
+| 🔐 | 安全认证 | PBKDF2 密码哈希、HttpOnly Session Cookie、CSRF 防护与登录失败限流 |
+| ⚡ | 加载优化 | 代码分割、边缘缓存、本地快照、图标懒加载与基础 PWA 离线回退 |
+
+## 界面预览
 
 <table>
   <tr>
     <td align="center" width="50%">
-      <strong>默认主题 · 深海蔚蓝亮色</strong><br>
-      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-light.jpg" alt="深海蔚蓝亮色桌面首页" width="420">
+      <strong>亮色首页</strong><br>
+      <img src="docs/screenshots/cf-navs-light.jpg" alt="CF-Navs 亮色首页">
     </td>
     <td align="center" width="50%">
-      <strong>深海蔚蓝暗色</strong><br>
-      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-dark.jpg" alt="深海蔚蓝暗色桌面首页" width="420">
-    </td>
-  </tr>
-  <tr>
-    <td align="center" colspan="2">
-      <strong>22 套内置主题模板 · 毛玻璃与护眼纯色 · 亮暗双背景</strong><br>
-      <img src="docs/screenshots/cf-navs-admin-setting.jpg" alt="22 套内置主题模板和亮暗背景设置" width="860">
+      <strong>暗色首页</strong><br>
+      <img src="docs/screenshots/cf-navs-dark.jpg" alt="CF-Navs 暗色首页">
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
       <strong>移动端亮色</strong><br>
-      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-light-mobile.jpg" alt="移动端亮色" width="260">
+      <img src="docs/screenshots/cf-navs-light-mobile.jpg" alt="CF-Navs 移动端亮色首页" width="260">
     </td>
     <td align="center" width="50%">
       <strong>移动端暗色</strong><br>
-      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-dark-mobile.jpg" alt="移动端暗色" width="260">
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <strong>首次运行安装器</strong><br>
-      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-loading.jpg" alt="首次运行安装器" width="420">
-    </td>
-    <td align="center" width="50%">
-      <strong>分类视图</strong><br>
-      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-tag.jpg" alt="分类视图" width="420">
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <strong>小卡片样式</strong><br>
-      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-bookmark-small.jpg" alt="小卡片样式" width="420">
-    </td>
-    <td align="center" width="50%">
-      <strong>书签编辑弹窗</strong><br>
-      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-bookmarkedit.jpg" alt="书签编辑弹窗" width="420">
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <strong>后台分类管理</strong><br>
-      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-admin-tag.jpg" alt="后台分类管理" width="420">
-    </td>
-    <td align="center" width="50%">
-      <strong>后台书签管理</strong><br>
-      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-admin-bookmark.jpg" alt="后台书签管理" width="420">
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <strong>浏览器网络耗时</strong><br>
-      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-loadtime.jpg" alt="浏览器网络耗时" width="420">
-    </td>
-    <td align="center" width="50%">
-      <strong>后台备份</strong><br>
-      <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-navs-backup.jpg" alt="后台备份" width="420">
+      <img src="docs/screenshots/cf-navs-dark-mobile.jpg" alt="CF-Navs 移动端暗色首页" width="260">
     </td>
   </tr>
 </table>
 
-> 🎨 内置 22 套跨色系模板：13 套毛玻璃渐变自动带入推荐遮罩和卡片透明度，9 套护眼纯色使用加深的低饱和前台背景、同色系浅卡片和高对比文字；每套均提供亮色和暗色配置，卡片透明度仍可手动调整。
->
-> 🌊 新安装站点默认启用「深海蔚蓝」亮色模式；前台仍可临时切换亮色、暗色或跟随系统，不会改写后台保存的主题配置。
->
-> 🧩 首次部署通过 `/install` 引导校验绑定、创建数据库结构和管理员账号，完成后直接进入已登录状态。
->
-> 🧭 后台「站点设置 → 布局与导航」可选择左侧或顶部布局。桌面左侧模式可开启常显并手动收缩；顶部模式固定悬浮，分类溢出时支持箭头、鼠标拖动和移动端触摸滑动。
->
-> ⚙️ 站点设置按「基础与标题、外观与卡片、布局与导航、搜索服务、页脚与扩展、账号安全」拆分为二级子菜单；设置内容区独立滚动，保存按钮固定在设置标题栏右侧。后台「数据备份与导入」同时提供 JSON/浏览器书签 HTML 的导出、追加合并和覆盖导入。
+<p align="center">
+  <strong>主题与站点设置</strong><br>
+  <img src="docs/screenshots/cf-navs-admin-setting.jpg" alt="CF-Navs 主题与站点设置">
+</p>
 
----
+更多界面截图位于 [`docs/screenshots`](docs/screenshots)。
 
-## 🚀 快速部署
+## 快速部署
 
-### 方式一：Wrangler CLI 部署
+CF-Navs 需要以下 Cloudflare 资源：
 
-**前置要求**：Node.js 18+、npm、Cloudflare 账号
+| 资源 | 绑定名 | 用途 |
+|---|---|---|
+| D1 Database | `DB` | 保存设置、分类和书签 |
+| KV Namespace | `SESSION` | 保存管理员会话 |
+| Secret | `SETUP_TOKEN` | 授权首次安装 |
+
+### 方式一：Cloudflare 控制台部署
+
+适合希望通过 GitHub Fork 持续部署的用户。
+
+1. [Fork 本仓库](https://github.com/lbjxr/CF-Navs/fork)。
+2. 在 Cloudflare 控制台打开 **Workers & Pages → Create application → Import a repository**，选择你 Fork 后的仓库。
+3. 将生产分支设为 `main`，Build command 填写 `npm run build`，Deploy command 填写 `npx wrangler deploy`。
+4. 首次部署完成后，在 Worker 的 **设置 → 变量和密钥** 中添加加密 Secret `SETUP_TOKEN`，值使用足够长的随机字符串。
+
+<p align="center">
+  <img src="docs/screenshots/cf-deploy3.jpg" alt="在 Cloudflare Worker 中添加 SETUP_TOKEN 密钥" width="100%">
+</p>
+
+5. 访问 `https://你的站点/install`，输入 `SETUP_TOKEN`，再创建管理员用户名和密码。
+6. 确认安装和登录成功后，删除或轮换 `SETUP_TOKEN`。
+
+> Cloudflare Git 会根据 [`wrangler.toml`](wrangler.toml) 中不带资源 ID 的声明创建并绑定 `DB` 与 `SESSION`。已有 Fork 应使用 **Import a repository**，不要使用会新建仓库的通用 Deploy Button。
+
+> Cloudflare Git 的 Deploy command 应使用 `npx wrangler deploy`。`npm run deploy` 会读取本地生成的 `wrangler.local.toml`，只适合本地 Wrangler CLI 部署。
+
+### 方式二：Wrangler CLI 部署
+
+前置条件：Node.js 18+、npm 和 Cloudflare 账号。
 
 ```bash
-# 1. 克隆并安装依赖
 git clone https://github.com/lbjxr/CF-Navs.git
 cd CF-Navs
 npm install
 
-# 2. 登录 Cloudflare
 npx wrangler login
-
-# 3. 创建 D1 数据库
 npx wrangler d1 create cf-navs-db
-
-# 4. 创建 KV 命名空间
 npx wrangler kv namespace create SESSION
 
-# 5. 生成本地 Wrangler 配置（保存真实资源 ID）
 npm run setup:wrangler
-
-# 6. 设置一次性安装令牌
 npx wrangler secret put SETUP_TOKEN
-
-# 7. 构建并部署
 npm run deploy
 ```
 
-部署成功后，访问 Wrangler 返回的 Workers URL 并打开 `/install`，输入刚设置的 `SETUP_TOKEN`，再创建管理员用户名和密码。安装器会初始化数据库 schema 和管理员账号。确认登录成功后，可删除或轮换 `SETUP_TOKEN`。`npm run db:init:remote` 仅用于安装器无法初始化 schema 时的恢复，不是全新 CLI 部署的正常步骤。
+`npm run setup:wrangler` 会把真实资源 ID 写入 Git 忽略的 `wrangler.local.toml`。部署完成后访问 `/install`，由安装器初始化数据库结构并创建管理员。
 
-### 方式二：Fork 后通过 Cloudflare 部署（推荐）
+正常安装不需要手动执行 SQL。只有安装器报告 schema 初始化失败时，才使用 [`schema.sql`](schema.sql) 或 `npm run db:init:remote` 恢复。
 
-适合不想在本地运行 CLI、希望从自己的 GitHub 仓库完成在线部署的用户。
+完整步骤与故障排查请阅读：
 
-[![Fork on GitHub](https://img.shields.io/badge/Fork%20on%20GitHub-181717?logo=github&logoColor=white)](https://github.com/lbjxr/CF-Navs/fork)
+- [快速开始](docs/guides/QUICKSTART.md)
+- [完整部署指南](docs/guides/DEPLOYMENT.md)
+- [常见问题排查](docs/guides/TROUBLESHOOTING.md)
 
-1. 点击上方按钮，在 GitHub 中 Fork 本项目。请确认 Fork 后的仓库归属于你的 GitHub 账号。
-2. 进入 Cloudflare 控制台的 **Workers & Pages → Create application → Import a repository**，关联 GitHub 并选择你 Fork 后的 `CF-Navs` 仓库。不要选择上游仓库，也不要使用会自动创建新 GitHub 项目的 Cloudflare Deploy Button。
-3. 保持生产分支为 `main`，构建命令填写 `npm run build`，部署命令填写：
+## 本地开发
+
+安装依赖：
 
 ```bash
-npx wrangler deploy
+npm install
 ```
 
-4. 保存并部署。Cloudflare 的 Git 引导流程会根据 `wrangler.toml` 中不带 ID 的声明创建并绑定 `DB` D1 数据库与 `SESSION` KV 命名空间。待部署完成后，进入该 Worker 的 **设置 → 变量和密钥**，添加一个类型为**密钥**的变量，变量名填写 `SETUP_TOKEN`，值填写一段足够长且随机的字符串。
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-deploy3.jpg" alt="在 Cloudflare Worker 中添加 SETUP_TOKEN 密钥" width="100%">
-</p>
-
-5. 打开部署后的 Workers URL，并访问 `/install`。输入 `SETUP_TOKEN`，再设置管理员用户名和密码；安装器会初始化数据库 schema 和管理员账号。
-6. 进入该 Worker 的 **域和路由** 页面，关闭两个 Workers URL，然后添加并启用你的自定义域名。
-
-> 如果 `/install` 无法完成 schema 初始化，才使用 D1 SQL Console 手动执行 [schema.sql](schema.sql) 作为恢复手段；不要把手动 SQL 当作正常安装步骤。
-
-首次部署请从生产分支 `main` 触发。不要在资源尚未创建前使用预览分支自动部署；预览分支可能走 `wrangler versions upload` 流程。
-
-资源绑定名必须保持如下配置：
-
-| 类型 | 绑定名 | 选择 |
-|---|---|---|
-| D1 database | `DB` | `cf-navs-db` |
-| KV namespace | `SESSION` | 你的会话 KV 命名空间 |
-
-> ⚠️ 这个部署方式必须使用你 Fork 后的仓库。Cloudflare 的通用 Deploy Button 会新建 GitHub 仓库，不能部署到已有 Fork；已有 Fork 必须在 Dashboard 选择 **Import a repository**。控制台中 Worker 名称需与 `wrangler.toml` 的 `name` 一致（默认 `cf-navs`），并确保绑定名为 `DB` 和 `SESSION`。
-
----
-
-## 🧪 本地开发
-
-> 首次使用请先 `npm install`。本地开发依赖 `wrangler.toml` 公开模板配置；真实资源 ID 通过 `npm run setup:wrangler` 写入 Git 忽略的 `wrangler.local.toml`。
+分别启动 Worker 和前端开发服务：
 
 ```bash
-# 终端 1：启动 Worker 开发服务
+# 终端 1
 npm run dev
 
-# 终端 2：启动前端开发服务器
+# 终端 2
 npm run dev:web
 ```
 
-访问 `http://localhost:5173`。验证完成后在对应终端按 `Ctrl+C` 停止服务。
+前端默认地址为 `http://localhost:5173`。
+
+常用检查：
 
 ```bash
-npm run type-check      # TypeScript 与 Svelte 类型检查
-npm test                # Vitest 单元测试
-npm run build           # 生产构建
-npm run db:init         # 初始化本地 D1
-npx wrangler tail       # 查看 Worker 日志
+npm run type-check
+npm test
+npm run build
+git diff --check
 ```
 
----
+## 技术栈
 
-## 🔑 环境变量说明
-
-### Secrets（通过 Dashboard 加密 Secret 或 `wrangler secret put` 设置）
-
-| 变量名 | 说明 |
+| 层级 | 技术 |
 |---|---|
-| `SETUP_TOKEN` | Cloudflare Git 和 Wrangler CLI 新部署必需的一次性安装令牌。部署后访问 `/install`，用它授权 schema 与管理员初始化；应使用足够长的随机值并保存为加密 Secret。确认安装成功后建议删除或轮换；公开安装状态检查不需要它，删除后不影响运行，保留也不会解除永久安装锁 |
-| `INIT_ADMIN_PASSWORD` | 仅用于旧数据库升级或凭据恢复的兼容 Secret。全新的 Cloudflare Git 和 Wrangler CLI 安装不要设置它，而是在 `/install` 中创建管理员密码 |
+| 前端 | Svelte 4、TypeScript、Vite |
+| Worker API | Hono、Cloudflare Workers |
+| 数据与会话 | Cloudflare D1、Cloudflare KV |
+| 交互与排序 | SortableJS |
+| 测试 | Vitest、Svelte Check、真实 Chrome 回归脚本 |
 
-### 必需绑定
+## 项目结构
 
-| 绑定名 | 类型 | 说明 |
-|---|---|---|
-| `DB` | D1 database | 数据库，存储分类、书签、设置 |
-| `SESSION` | KV namespace | 会话存储，保存登录 Token |
+```text
+CF-Navs/
+├── src/                 # Svelte 页面、组件与浏览器端逻辑
+├── worker/              # Worker 路由、中间件与 D1 数据访问
+├── shared/              # 前后端共享类型与设置契约
+├── public/              # 图标、PWA 与其他静态资源
+├── tests/               # Vitest 单元与回归测试
+├── docs/                # 使用指南、技术参考与截图
+├── scripts/             # 开发、部署与审计脚本
+├── schema.sql           # D1 数据库结构
+└── wrangler.toml        # Cloudflare Worker 公开配置
+```
 
-### 可选变量（`wrangler.toml` vars 或 Dashboard Variables）
+架构、API 和性能契约可在 [项目文档索引](docs/README.md) 中查看。
 
-| 变量名 | 默认值 | 说明 |
-|---|---|---|
-| `INIT_ADMIN_USER` | `admin` | 旧数据库升级或凭据恢复时使用的兼容管理员用户名；全新安装在 `/install` 中设置 |
-| `RESET_ADMIN_CREDENTIALS` | 空 | 旧数据库首次升级或需要强制重置时使用一次性标记，例如 `reset-2026-07-12`；每次强制重置请更换标记值 |
-| `SESSION_TTL` | `604800` | 会话有效期（秒），默认 7 天 |
+## 环境配置
 
-`INIT_ADMIN_USER`、`INIT_ADMIN_PASSWORD` 和 `RESET_ADMIN_CREDENTIALS` 仅保留给旧数据库升级与凭据恢复。全新的 Cloudflare Git 或 Wrangler CLI 部署都应使用 `SETUP_TOKEN` + `/install` 设置管理员，日常修改密码请使用后台「账号安全」。升级已有旧数据库时，如果数据库还没有初始化标记，可设置新的 `RESET_ADMIN_CREDENTIALS` 值并重新部署，成功登录后移除该变量。
+| 名称 | 类型 | 必需 | 说明 |
+|---|---|---|---|
+| `DB` | D1 binding | 是 | 数据库绑定 |
+| `SESSION` | KV binding | 是 | 会话存储绑定 |
+| `SETUP_TOKEN` | Secret | 首次安装 | 授权 `/install`，安装成功后建议删除或轮换 |
+| `SESSION_TTL` | Variable | 否 | 会话有效期，默认 `604800` 秒 |
+| `INIT_ADMIN_USER` | Variable | 否 | 仅用于旧数据库升级或凭据恢复 |
+| `INIT_ADMIN_PASSWORD` | Secret | 否 | 仅用于旧数据库升级或凭据恢复 |
+| `RESET_ADMIN_CREDENTIALS` | Variable | 否 | 旧数据库强制重置凭据时使用的一次性标记 |
 
----
+不要把真实资源 ID、密码、Token 或其他 Secret 写入仓库。
 
-## 🌟 贡献
+## 数据导入
 
-欢迎通过 Issue 或 Pull Request 为本项目贡献代码。
+后台支持以下数据格式：
 
-1. Fork 本仓库
-2. 创建特性分支：`git checkout -b feature/amazing-feature`
-3. 提交更改：`git commit -m 'Add some amazing feature'`
-4. 推送到分支：`git push origin feature/amazing-feature`
-5. 创建 Pull Request
+- CF-Navs JSON 备份：完整导出、追加合并或覆盖恢复。
+- Sun-Panel 数据：转换分类、书签与兼容图标字段。
+- 浏览器书签 HTML：导入浏览器导出的标准书签文件。
 
----
+参阅 [Sun-Panel 数据导入](docs/guides/SUNPANEL_IMPORT.md) 和 [浏览器书签导入](docs/guides/BROWSER_BOOKMARK_IMPORT.md)。
 
-## 🙏 致谢
+## 贡献
 
-本项目参考了 [Sun-Panel](https://github.com/hslr-s/sun-panel) 的设计思路，部分图标获取逻辑受 [iori-nav](https://github.com/jy02739244/iori-nav) 启发。
+欢迎通过 Issue 或 Pull Request 提交问题与改进。请保持改动范围明确，并在提交前运行与改动相关的类型检查、测试和构建。
 
----
+## 致谢
 
-## ⭐ Star 趋势
+项目参考了 [Sun-Panel](https://github.com/hslr-s/sun-panel) 的设计思路，部分图标获取逻辑受 [iori-nav](https://github.com/jy02739244/iori-nav) 启发。
+
+## Star 趋势
 
 <a href="https://www.star-history.com/?repos=lbjxr%2FCF-Navs&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=lbjxr/CF-Navs&type=date&theme=dark&legend=top-left&sealed_token=Bf0GixdoBy-NMTywqMqPjVOrUUv5wDjqFB3rty7IYwn3OWau-UR3vdmWDYXDWQW1IkKWhzCs3IdPJZSTzqzcLlYyj1O4-effSpu5AUbhdCU-IbGV378MUn1OG5wkDgP-PGjyaVTEZBtzdp0P_CrCf5ZzZwmcEBDnnUIL-bX1PhN3Mc0vMlATyNrA-TRa" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=lbjxr/CF-Navs&type=date&legend=top-left&sealed_token=Bf0GixdoBy-NMTywqMqPjVOrUUv5wDjqFB3rty7IYwn3OWau-UR3vdmWDYXDWQW1IkKWhzCs3IdPJZSTzqzcLlYyj1O4-effSpu5AUbhdCU-IbGV378MUn1OG5wkDgP-PGjyaVTEZBtzdp0P_CrCf5ZzZwmcEBDnnUIL-bX1PhN3Mc0vMlATyNrA-TRa" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=lbjxr/CF-Navs&type=date&legend=top-left&sealed_token=Bf0GixdoBy-NMTywqMqPjVOrUUv5wDjqFB3rty7IYwn3OWau-UR3vdmWDYXDWQW1IkKWhzCs3IdPJZSTzqzcLlYyj1O4-effSpu5AUbhdCU-IbGV378MUn1OG5wkDgP-PGjyaVTEZBtzdp0P_CrCf5ZzZwmcEBDnnUIL-bX1PhN3Mc0vMlATyNrA-TRa" />
- </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=lbjxr/CF-Navs&type=date&theme=dark&legend=top-left&sealed_token=Bf0GixdoBy-NMTywqMqPjVOrUUv5wDjqFB3rty7IYwn3OWau-UR3vdmWDYXDWQW1IkKWhzCs3IdPJZSTzqzcLlYyj1O4-effSpu5AUbhdCU-IbGV378MUn1OG5wkDgP-PGjyaVTEZBtzdp0P_CrCf5ZzZwmcEBDnnUIL-bX1PhN3Mc0vMlATyNrA-TRa">
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=lbjxr/CF-Navs&type=date&legend=top-left&sealed_token=Bf0GixdoBy-NMTywqMqPjVOrUUv5wDjqFB3rty7IYwn3OWau-UR3vdmWDYXDWQW1IkKWhzCs3IdPJZSTzqzcLlYyj1O4-effSpu5AUbhdCU-IbGV378MUn1OG5wkDgP-PGjyaVTEZBtzdp0P_CrCf5ZzZwmcEBDnnUIL-bX1PhN3Mc0vMlATyNrA-TRa">
+    <img alt="CF-Navs Star History Chart" src="https://api.star-history.com/chart?repos=lbjxr/CF-Navs&type=date&legend=top-left&sealed_token=Bf0GixdoBy-NMTywqMqPjVOrUUv5wDjqFB3rty7IYwn3OWau-UR3vdmWDYXDWQW1IkKWhzCs3IdPJZSTzqzcLlYyj1O4-effSpu5AUbhdCU-IbGV378MUn1OG5wkDgP-PGjyaVTEZBtzdp0P_CrCf5ZzZwmcEBDnnUIL-bX1PhN3Mc0vMlATyNrA-TRa">
+  </picture>
 </a>
 
----
+## 许可证
 
-## 📄 许可证
-
-[MIT](LICENSE)
+本项目采用 [MIT License](LICENSE)。

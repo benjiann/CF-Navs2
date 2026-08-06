@@ -513,6 +513,8 @@
     contain-intrinsic-size: auto 420px;
   }
 
+  .section-shell:hover,
+  .section-shell:focus-within,
   .section-list.is-navigation-layout-ready .section-shell {
     content-visibility: visible;
     contain-intrinsic-size: none;

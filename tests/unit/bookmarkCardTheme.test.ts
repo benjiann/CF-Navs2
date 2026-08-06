@@ -78,4 +78,15 @@ describe('bookmark card theme styles', () => {
     expect(tooltip).toContain('z-index: 20;')
     expect(tooltip).toContain('@media (hover: none)')
   })
+
+  it('releases section paint containment while a tooltip can be interactive', () => {
+    const home = readFileSync('src/views/Home.svelte', 'utf8')
+    const interactiveRule = home.match(
+      /\.section-shell:hover,\s*\.section-shell:focus-within,\s*\.section-list\.is-navigation-layout-ready \.section-shell\s*\{([^}]+)\}/,
+    )?.[1] ?? ''
+
+    expect(home).toContain('content-visibility: auto;')
+    expect(interactiveRule).toContain('content-visibility: visible;')
+    expect(interactiveRule).toContain('contain-intrinsic-size: none;')
+  })
 })
