@@ -1,7 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte'
   import { cloneSettingsForm, type SettingsFormModel } from '../../lib/settingsForm'
-  import ColorAlphaInput from '../ColorAlphaInput.svelte'
 
   export let form: SettingsFormModel
   export let saving = false
@@ -12,41 +11,40 @@
   }
 </script>
 
-<fieldset id="settings-section-hero" class="group group-wide" disabled={saving}>
-  <legend>标题与搜索</legend>
-  <p class="group-desc">首页顶部大标题的展示效果，以及搜索区域的显示开关。</p>
+<fieldset id="settings-section-search-display" class="group group-wide" disabled={saving}>
+  <legend>首页显示</legend>
+  <p class="group-desc">控制首页标题、搜索入口和「经常访问」区域的显示方式。</p>
 
-  <div class="form-grid hero-grid">
-    <div class="field field-color">
-      <span>标题颜色</span>
-      <ColorAlphaInput
-        bind:value={form.site_title_color}
-        on:change={() => void syncForm()}
-        placeholder="留空则跟随主题"
-        inputLabel="标题颜色值"
-        swatchTitle="选择标题颜色"
-        alphaText="标题透明度"
-      />
-      <small>留空时自动跟随当前主题的文字颜色，切换亮暗模式都能保持清晰。</small>
-    </div>
-
+  <div class="form-grid search-display-grid">
     <label class="field field-range">
-      <span>标题文字大小 <em>{form.site_title_font_size}px</em></span>
+      <span>经常访问展示数量 <em>{form.most_visited_count === 0 ? '已禁用' : form.most_visited_count}</em></span>
       <input
-        bind:value={form.site_title_font_size}
+        bind:value={form.most_visited_count}
         type="range"
-        min="16"
-        max="72"
+        min="0"
+        max="20"
         step="1"
         on:input={() => void syncForm()}
       />
-      <small>首页大标题字号，建议 28-44px。</small>
+      <small>设置首页顶部「经常访问」区域展示的书签上限。设为 0 可完全隐藏该区域。</small>
+    </label>
+
+    <label class="toggle-field field-toggle">
+      <div class="toggle-copy">
+        <span>显示站点标题</span>
+        <p>关闭后首页不再展示大标题字样。</p>
+      </div>
+      <input
+        bind:checked={form.site_title_show}
+        on:change={() => void syncForm()}
+        type="checkbox"
+      />
     </label>
 
     <label class="toggle-field field-toggle">
       <div class="toggle-copy">
         <span>显示搜索框</span>
-        <p>关闭后首页只保留标题和书签列表。</p>
+        <p>关闭后首页隐藏整个搜索区域，只显示标题、导航与书签内容。</p>
       </div>
       <input
         bind:checked={form.search_box_show}
@@ -58,7 +56,7 @@
     <label class="toggle-field field-toggle">
       <div class="toggle-copy">
         <span>显示引擎选择器</span>
-        <p>关闭后搜索框固定使用默认搜索引擎。</p>
+        <p>关闭后搜索框直接使用下方设置的默认搜索引擎。</p>
       </div>
       <input
         bind:checked={form.search_engine_selector_show}
@@ -70,15 +68,15 @@
 </fieldset>
 
 <style>
-  .field-color,
-  .field-range,
+  .field-range {
+    grid-column: 1 / -1;
+  }
+
   .field-toggle {
-    grid-column: span 3;
+    grid-column: span 4;
   }
 
   @media (max-width: 960px) {
-    .field-color,
-    .field-range,
     .field-toggle {
       grid-column: 1 / -1;
     }

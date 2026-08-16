@@ -3,6 +3,7 @@
 -- 分类（栏目）
 CREATE TABLE IF NOT EXISTS categories (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  parent_id   INTEGER,                    -- NULL=一级分类，非空=所属一级分类
   title       TEXT NOT NULL,
   icon        TEXT,                       -- 图标 URL（可填 cftc 直链）
   sort        INTEGER NOT NULL DEFAULT 0,
@@ -23,6 +24,7 @@ CREATE TABLE IF NOT EXISTS bookmarks (
   description_mode TEXT,
   open_method  INTEGER NOT NULL DEFAULT 1,-- 1=新窗口 2=当前页 3=当前页弹层
   sort         INTEGER NOT NULL DEFAULT 0,
+  click_count  INTEGER NOT NULL DEFAULT 0,
   created_at   INTEGER NOT NULL
 );
 
@@ -37,6 +39,7 @@ CREATE INDEX IF NOT EXISTS idx_bookmarks_sort ON bookmarks(category_id, sort);
 CREATE INDEX IF NOT EXISTS idx_bookmarks_sort_global ON bookmarks(sort, id);
 CREATE INDEX IF NOT EXISTS idx_categories_sort ON categories(sort);
 CREATE INDEX IF NOT EXISTS idx_categories_sort_id ON categories(sort, id);
+CREATE INDEX IF NOT EXISTS idx_categories_parent_sort_id ON categories(parent_id, sort, id);
 
 -- 全局设置（key-value，避免频繁改表结构）
 CREATE TABLE IF NOT EXISTS settings (
@@ -57,6 +60,8 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
   ('custom_css', '""'),
   ('custom_js', '""'),
   ('image_host_url', '""'),
+  ('site_title_show', 'true'),
+  ('most_visited_count', '8'),
   ('search_engine', '{"current":"Google","engines":[{"name":"Google","icon":"","url_template":"https://www.google.com/search?q={q}"},{"name":"Bing","icon":"","url_template":"https://www.bing.com/search?q={q}"}]}'),
   ('card_size', '{"width":80,"height":60}'),
   ('card_style', '"info"'),

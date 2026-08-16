@@ -1,12 +1,13 @@
 <script lang="ts">
   import type { ChangePasswordReq } from '../../../shared/types'
   import type { AdminBookmarkSummary, AdminCategorySummary, SettingsFormValue } from '../../lib/appData'
-  import type { AdminTab } from '../../lib/adminTypes'
+  import type { AdminTab, CategorySortHandler } from '../../lib/adminTypes'
   import type { ImportSource } from '../../lib/importData'
   import type { SortHandler } from '../../lib/sortableList'
   import BackupPanel from '../BackupPanel.svelte'
   import BookmarkListPanel from './BookmarkListPanel.svelte'
   import CategoryListPanel from './CategoryListPanel.svelte'
+  import AnalyticsPanel from './AnalyticsPanel.svelte'
 
   type AdminCategory = AdminCategorySummary
   type AdminBookmark = AdminBookmarkSummary
@@ -42,7 +43,7 @@
   export let onBatchDeleteBookmarks: ((ids: number[]) => AsyncVoid) | undefined = undefined
   export let onSubmitSettings: ((payload: SettingsFormValue) => AsyncVoid) | undefined = undefined
   export let onChangePassword: ((payload: ChangePasswordReq) => AsyncVoid) | undefined = undefined
-  export let onSortCategories: SortHandler | undefined = undefined
+  export let onSortCategories: CategorySortHandler | undefined = undefined
   export let onSortBookmarks: SortHandler | undefined = undefined
   export let onExportData: (() => AsyncVoid) | undefined = undefined
   export let onImportData: ((file: File, source: ImportSource, mode: 'replace' | 'merge') => AsyncVoid) | undefined = undefined
@@ -77,6 +78,11 @@
       {onDeleteBookmark}
       {onBatchDeleteBookmarks}
       {onSortBookmarks}
+    />
+  {:else if activeTab === 'analytics'}
+    <AnalyticsPanel
+      {bookmarks}
+      {categories}
     />
   {:else if activeTab === 'settings'}
     <section class="settings-panel-wrap">
@@ -147,6 +153,14 @@
   @media (max-width: 960px) {
     .admin-content {
       gap: 16px;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .admin-content {
+      height: auto;
+      overflow: visible;
+      padding-right: 0;
     }
   }
 </style>

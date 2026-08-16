@@ -2,6 +2,8 @@
   import { onDestroy, onMount } from 'svelte'
   import type { CardStyle, DescriptionDisplayMode, PublicBookmark } from '../../shared/types'
   import BookmarkCardCompact from './BookmarkCardCompact.svelte'
+  import { publicStore } from '../lib/stores'
+  import { api } from '../lib/api'
   import BookmarkCardInfo from './BookmarkCardInfo.svelte'
   import BookmarkContextMenu from './BookmarkContextMenu.svelte'
   import BookmarkLinkModal from './BookmarkLinkModal.svelte'
@@ -38,6 +40,8 @@
   export let height: number = 0
   export let canEdit = false
   export let sortMode = false
+  export let preview = false
+  export let themeOverride: 'light' | 'dark' | null = null
   export let onEdit: ((bookmark: PublicBookmark) => AsyncVoid) | undefined = undefined
 
   let cachedIconFailed = false
@@ -95,7 +99,7 @@
   $: tooltipText = bookmark.description ? `${bookmark.title}\n${bookmark.description}` : bookmark.title
   $: cardShellStyle =
     style === 'info'
-      ? `min-width: ${width}px; ${height > 0 ? `height: ${height}px;` : ''}`
+      ? `--card-configured-min-width: ${Math.max(0, width)}px; ${height > 0 ? `height: ${height}px;` : ''}`
       : `width: ${compactShellWidth}px;`
   $: cardLinkStyle = height > 0 ? `height: ${height}px;` : ''
   $: if (nextIconStateKey !== iconStateKey) {
@@ -183,10 +187,19 @@
   }
 
   function handleLinkClick(event: MouseEvent) {
+    if (preview) {
+      event.preventDefault()
+      return
+    }
     if (shouldBlockCardNavigation(sortMode)) {
       event.preventDefault()
       return
     }
+
+    // Register click both locally and on server
+    publicStore.incrementClick(bookmark.id)
+    void api.public.registerClick(bookmark.id)
+
     if (!shouldOpenBookmarkModal({ sortMode, openMethod: bookmark.open_method })) return
     event.preventDefault()
     modalOpen = true
@@ -279,6 +292,8 @@
       {infoIconSize}
       {infoIconStyle}
       {hasCustomIconBackground}
+      {preview}
+      {themeOverride}
       onLinkClick={handleLinkClick}
       onContextMenu={handleContextMenu}
       onIconError={handleIconError}
@@ -296,6 +311,8 @@
       iconUrl={hasRenderableIcon ? iconUrl : ''}
       {iconText}
       {hasCustomIconBackground}
+      {preview}
+      {themeOverride}
       onLinkClick={handleLinkClick}
       onContextMenu={handleContextMenu}
       onIconError={handleIconError}
@@ -321,6 +338,7 @@
 
   .bookmark-card-shell.is-info {
     width: 100%;
+    min-width: var(--card-configured-min-width, 200px);
   }
 
   .bookmark-card-shell.is-icon {
@@ -328,6 +346,12 @@
     flex-direction: column;
     align-items: center;
     flex: 0 0 auto;
+  }
+
+  @media (max-width: 500px) {
+    .bookmark-card-shell.is-info {
+      min-width: 0;
+    }
   }
 
 </style>

@@ -7,8 +7,10 @@ export { toPublicSettings } from '../../shared/settings'
 
 export type AdminCategorySummary = {
   id: string | number
+  parent_id: string | number | null
   title: string
   icon?: string
+  sort?: number
   bookmarkCount?: number
 }
 
@@ -25,11 +27,12 @@ export type AdminBookmarkSummary = {
   description?: string
   description_mode?: 'always' | 'hover' | 'hidden' | null
   open_method?: 'same_tab' | 'new_tab' | 'modal'
+  click_count?: number
 }
 
 export type SettingsFormValue = Pick<
   Settings,
-  'site_title' | 'site_title_color' | 'site_title_font_size' | 'public_mode' | 'theme' | 'background_preset_id' | 'custom_css' | 'custom_js' | 'image_host_url' | 'background' | 'backgrounds' | 'search_engine' | 'card_size' | 'card_style' | 'card_icon_size' | 'card_show_description' | 'card_description_mode' | 'card_background_color' | 'card_background_opacity' | 'card_icon_show_title' | 'card_text_color' | 'search_box_show' | 'search_engine_selector_show' | 'content_layout' | 'navigation' | 'footer_html'
+  'site_title' | 'site_title_color' | 'site_title_font_size' | 'public_mode' | 'theme' | 'background_preset_id' | 'custom_css' | 'custom_js' | 'image_host_url' | 'background' | 'backgrounds' | 'search_engine' | 'card_size' | 'card_style' | 'card_icon_size' | 'card_show_description' | 'card_description_mode' | 'card_background_color' | 'card_background_opacity' | 'card_icon_show_title' | 'card_text_color' | 'search_box_show' | 'search_engine_selector_show' | 'content_layout' | 'navigation' | 'footer_html' | 'most_visited_count' | 'site_title_show'
 >
 
 export function toAdminCategories(categories: Category[], bookmarks: Bookmark[]): AdminCategorySummary[] {
@@ -43,8 +46,10 @@ export function toAdminCategories(categories: Category[], bookmarks: Bookmark[])
 
   return categories.map((category) => ({
     id: category.id,
+    parent_id: category.parent_id ?? null,
     title: category.title,
     icon: category.icon ?? '',
+    sort: category.sort,
     bookmarkCount: bookmarkCountByCategory.get(category.id) ?? 0,
   }))
 }
@@ -63,6 +68,7 @@ export function toAdminBookmarks(bookmarks: Bookmark[]): AdminBookmarkSummary[] 
     description: bookmark.description ?? '',
     description_mode: bookmark.description_mode ?? null,
     open_method: bookmark.open_method === 2 ? 'same_tab' : bookmark.open_method === 3 ? 'modal' : 'new_tab',
+    click_count: bookmark.click_count ?? 0,
   }))
 }
 
@@ -81,6 +87,7 @@ export function toPublicBookmark(bookmark: Bookmark): PublicBookmark {
     description_mode: bookmark.description_mode ?? null,
     open_method: bookmark.open_method,
     sort: bookmark.sort,
+    click_count: bookmark.click_count ?? 0,
   }
 }
 
@@ -118,6 +125,8 @@ export function toSettingsForm(settings: Settings | null): SettingsFormValue | n
     content_layout: settings.content_layout,
     navigation: settings.navigation,
     footer_html: settings.footer_html,
+    most_visited_count: settings.most_visited_count,
+    site_title_show: settings.site_title_show,
   }
 }
 

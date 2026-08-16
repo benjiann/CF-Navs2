@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
   import type { AdminBookmarkSummary, AdminCategorySummary } from '../../lib/appData'
   import {
     clampAdminListPage,
@@ -15,6 +15,7 @@
     reorderAdminSortDraft,
   } from '../../lib/adminListState'
   import { getBookmarkFallbackIcon, getBookmarkIconUrl, hasBookmarkImageIcon } from '../../lib/bookmarkIconDisplay'
+  import { truncateUnicodeText } from '../../lib/truncateUnicodeText'
   import { sortableList, type SortHandler } from '../../lib/sortableList'
   import CachedBookmarkIcon from '../CachedBookmarkIcon.svelte'
   import './adminListPanels.css'
@@ -124,6 +125,42 @@
     search = (event.currentTarget as HTMLInputElement).value
     page = 1
   }
+
+  import { api } from '../../lib/api'
+
+  let checkingHealth = false
+  let healthProgress = 0
+  let healthTotal = 0
+  let healthResults = new Map<number, { status: number | string; ok: boolean }>()
+
+  async function checkBookmarksHealth() {
+    if (checkingHealth || bookmarks.length === 0) return
+    checkingHealth = true
+    healthProgress = 0
+    healthTotal = bookmarks.length
+    healthResults = new Map()
+
+    const bookmarkIds = bookmarks.map((b) => Number(b.id))
+    const BATCH_SIZE = 10
+
+    try {
+      for (let offset = 0; offset < bookmarkIds.length; offset += BATCH_SIZE) {
+        const batchIds = bookmarkIds.slice(offset, offset + BATCH_SIZE)
+        const res = await api.bookmarks.checkHealth(batchIds)
+        if (res) {
+          for (const item of res) {
+            healthResults.set(item.id, { status: item.status, ok: item.ok })
+          }
+          healthProgress = Math.min(offset + BATCH_SIZE, healthTotal)
+          healthResults = healthResults
+        }
+      }
+    } catch (err) {
+      console.error('Failed to run health check:', err)
+    } finally {
+      checkingHealth = false
+    }
+  }
 </script>
 
 <div class="admin-list-view">
@@ -142,6 +179,20 @@
         >
           排序
         </button>
+        {#if checkingHealth}
+          <div class="admin-health-progress">
+            正在检测 ({healthProgress}/{healthTotal})
+          </div>
+        {:else}
+          <button
+            type="button"
+            class="admin-ghost-button"
+            on:click={checkBookmarksHealth}
+            disabled={sortMode || !isAuthenticated || bookmarksLoading || authLoading || bookmarks.length === 0}
+          >
+            检测链接健康
+          </button>
+        {/if}
         <button type="button" class="admin-danger-button" on:click={() => onBatchDeleteBookmarks?.([...selectedIds])} disabled={!isAuthenticated || selectedIds.size === 0}>删除已选 ({selectedIds.size})</button>
         {#if selectedIds.size > 0}<button type="button" class="admin-ghost-button" on:click={() => selectedIds = new Set()}>清除选择</button>{/if}
         <button
@@ -180,19 +231,19 @@
         <div class="admin-table-wrap">
           <table class="admin-bookmark-table" class:is-sorting={sortMode}>
             <colgroup>
-              <col style="width: 44px;" />
-              <col style="width: 30%;" />
-              <col style="width: 50%;" />
-              <col style="width: 12%;" />
-              <col style="width: 8%;" />
-              {#if !sortMode}<col style="width: 122px;" />{/if}
+              <col class="col-selection" style="width: 44px;" />
+              <col class="col-title" style="width: 30%;" />
+              <col class="col-url" style="width: 50%;" />
+              <col class="col-category" style="width: 12%;" />
+              <col class="col-open-method" style="width: 8%;" />
+              {#if !sortMode}<col class="col-actions" style="width: 122px;" />{/if}
             </colgroup>
             <thead>
               <tr>
                 {#if !sortMode}<th style="width: 44px;"><input type="checkbox" aria-label="全选当前页" checked={pageSelectedCount === pageIds.length && pageIds.length > 0} use:indeterminate={pageSelectedCount > 0 && pageSelectedCount < pageIds.length} on:change={togglePageSelection} /></th>{/if}
                 {#if sortMode}<th style="width: 44px;">排序</th>{/if}
                 {#each sortColumns as column}
-                  <th aria-sort={sortField === column.field ? (sortDirection === 'asc' ? 'ascending' : sortDirection === 'desc' ? 'descending' : 'none') : 'none'}><button type="button" class="sort-header-button" aria-label={sortButtonLabel(column.field, column.label)} on:click={() => toggleField(column.field)} disabled={sortMode}>{column.label}<svg viewBox="0 0 16 16" aria-hidden="true"><path d={sortField === column.field && sortDirection === 'asc' ? 'M8 3 4 7h3v6h2V7h3L8 3Z' : sortField === column.field && sortDirection === 'desc' ? 'm8 13 4-4H9V3H7v6H4l4 4Z' : 'm5 2-3 3h2v6h2V5h2L5 2Zm6 12 3-3h-2V5h-2v6H8l3 3Z'} /></svg></button></th>
+                  <th class="col-{column.field}" aria-sort={sortField === column.field ? (sortDirection === 'asc' ? 'ascending' : sortDirection === 'desc' ? 'descending' : 'none') : 'none'}><button type="button" class="sort-header-button" aria-label={sortButtonLabel(column.field, column.label)} on:click={() => toggleField(column.field)} disabled={sortMode}>{column.label}<svg viewBox="0 0 16 16" aria-hidden="true"><path d={sortField === column.field && sortDirection === 'asc' ? 'M8 3 4 7h3v6h2V7h3L8 3Z' : sortField === column.field && sortDirection === 'desc' ? 'm8 13 4-4H9V3H7v6H4l4 4Z' : 'm5 2-3 3h2v6h2V5h2L5 2Zm6 12 3-3h-2V5h-2v6H8l3 3Z'} /></svg></button></th>
                 {/each}
                 {#if !sortMode}<th style="width: 122px;">操作</th>{/if}
               </tr>
@@ -237,19 +288,47 @@
                           {getBookmarkFallbackIcon(bookmark)}
                         {/if}
                       </span>
-                      <div>
-                        <strong>{bookmark.title}</strong>
+                      <div class="admin-bookmark-info">
+                        <strong title={bookmark.title} aria-label={bookmark.title}>
+                          <span class="admin-bookmark-title-full">{bookmark.title}</span>
+                          <span class="admin-bookmark-title-mobile" aria-hidden="true">{truncateUnicodeText(bookmark.title, 12)}</span>
+                        </strong>
+                        <div class="admin-bookmark-meta">
+                          <span class="admin-bookmark-category">{getCategoryTitle(bookmark.category_id)}</span>
+                          <span class="admin-bookmark-method">{bookmark.open_method === 'same_tab' ? '当前标签页' : bookmark.open_method === 'modal' ? '当前页弹层' : '新标签页'}</span>
+                        </div>
+                        <a href={bookmark.url} target="_blank" rel="noreferrer" class="admin-bookmark-mobile-url" title={bookmark.url} aria-label={`打开 ${bookmark.url}`}>
+                          {truncateUnicodeText(bookmark.url, 20)}
+                        </a>
+                        {#if healthResults.has(Number(bookmark.id))}
+                          {@const mobileResult = healthResults.get(Number(bookmark.id))}
+                          {#if mobileResult && mobileResult.ok}
+                            <span class="health-badge ok admin-bookmark-mobile-health">200 OK</span>
+                          {:else if mobileResult}
+                            <span class="health-badge error admin-bookmark-mobile-health" title={`连接错误: ${mobileResult.status}`}>{mobileResult.status}</span>
+                          {/if}
+                        {/if}
                         {#if bookmark.description}
                           <p>{bookmark.description}</p>
                         {/if}
                       </div>
                     </div>
                   </td>
-                  <td class="admin-url-cell">
-                    <a href={bookmark.url} target="_blank" rel="noreferrer">{bookmark.url}</a>
+                  <td class="admin-url-cell col-url">
+                    <div class="admin-url-badge-wrap">
+                      <a href={bookmark.url} target="_blank" rel="noreferrer">{bookmark.url}</a>
+                      {#if healthResults.has(Number(bookmark.id))}
+                        {@const result = healthResults.get(Number(bookmark.id))}
+                        {#if result && result.ok}
+                          <span class="health-badge ok">200 OK</span>
+                        {:else if result}
+                          <span class="health-badge error" title={`连接错误: ${result.status}`}>{result.status}</span>
+                        {/if}
+                      {/if}
+                    </div>
                   </td>
-                  <td class="admin-cat-cell">{getCategoryTitle(bookmark.category_id)}</td>
-                  <td class="admin-method-cell">
+                  <td class="admin-cat-cell col-category">{getCategoryTitle(bookmark.category_id)}</td>
+                  <td class="admin-method-cell col-open-method">
                     {bookmark.open_method === 'same_tab' ? '当前标签页' : bookmark.open_method === 'modal' ? '当前页弹层' : '新标签页'}
                   </td>
                   {#if !sortMode}
@@ -356,7 +435,7 @@
     color: var(--admin-text);
     background: var(--admin-input-bg);
     font-family: inherit;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
   }
 
   .admin-bookmark-search-bar input:focus {
@@ -432,6 +511,24 @@
     text-align: left;
   }
 
+  .admin-bookmark-info {
+    min-width: 0;
+  }
+
+  .admin-bookmark-info > strong {
+    display: block;
+  }
+
+  .admin-bookmark-title-mobile {
+    display: none;
+  }
+
+  .admin-bookmark-meta,
+  .admin-bookmark-mobile-url,
+  .admin-bookmark-mobile-health {
+    display: none;
+  }
+
   .admin-bookmark-cell p {
     color: var(--admin-subtle);
     line-height: 1.5;
@@ -470,6 +567,154 @@
 
     .admin-inline-actions.compact {
       justify-content: flex-start;
+    }
+  }
+
+  @media (max-width: 700px) {
+    .admin-table-scroll-body {
+      overflow-x: hidden;
+    }
+
+    .admin-table-wrap {
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .admin-bookmark-table {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .admin-bookmark-table col.col-selection {
+      width: 38px !important;
+    }
+
+    .admin-bookmark-table col.col-title {
+      width: auto !important;
+    }
+
+    .admin-bookmark-table col.col-actions {
+      width: 144px !important;
+    }
+
+    .admin-bookmark-table .col-url,
+    .admin-bookmark-table .col-category,
+    .admin-bookmark-table .col-open-method,
+    .admin-bookmark-table .col-open_method {
+      display: none !important;
+    }
+
+    .admin-bookmark-table th,
+    .admin-bookmark-table td {
+      padding: 9px 6px;
+    }
+
+    .admin-bookmark-table th:first-child,
+    .admin-bookmark-table td:first-child {
+      text-align: center;
+    }
+
+    .admin-bookmark-table td:last-child {
+      padding-left: 4px;
+      padding-right: 4px;
+    }
+
+    .admin-bookmark-cell {
+      min-width: 0;
+      gap: 8px;
+    }
+
+    .admin-bookmark-cell .admin-icon-badge.small {
+      width: 30px;
+      height: 30px;
+      font-size: 14px;
+    }
+
+    .admin-bookmark-info {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .admin-bookmark-info > strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .admin-bookmark-title-full {
+      display: none;
+    }
+
+    .admin-bookmark-title-mobile {
+      display: inline;
+    }
+
+    .admin-bookmark-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      margin-top: 3px;
+      color: var(--admin-subtle);
+      font-size: 11px;
+      line-height: 1.3;
+    }
+
+    .admin-bookmark-category,
+    .admin-bookmark-method {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .admin-bookmark-category {
+      max-width: 58%;
+    }
+
+    .admin-bookmark-method {
+      flex: 0 1 auto;
+    }
+
+    .admin-bookmark-mobile-url {
+      display: block;
+      min-width: 0;
+      overflow: hidden;
+      color: var(--admin-link);
+      font-size: 11px;
+      line-height: 1.3;
+      text-decoration: none;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .admin-bookmark-mobile-url:hover {
+      text-decoration: underline;
+    }
+
+    .admin-bookmark-mobile-health {
+      display: inline-flex;
+      margin-top: 3px;
+    }
+
+    .admin-bookmark-cell p {
+      display: none;
+    }
+
+    .admin-inline-actions.compact {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 4px;
+      width: 100%;
+    }
+
+    .admin-inline-actions.compact .admin-ghost-button,
+    .admin-inline-actions.compact .admin-danger-button {
+      min-width: 0;
+      padding-left: 3px;
+      padding-right: 3px;
+      font-size: 11px;
+      white-space: nowrap;
     }
   }
 </style>

@@ -18,7 +18,7 @@
   import AdminTabContent from '../components/admin/AdminTabContent.svelte'
   import type { ImportSource } from '../lib/importData'
   import type { SettingsFormValue } from '../lib/appData'
-  import type { AdminTab } from '../lib/adminTypes'
+  import type { AdminTab, CategorySortHandler } from '../lib/adminTypes'
   import type { SortHandler } from '../lib/sortableList'
 
   type AsyncVoid<T = void> = T | Promise<T>
@@ -91,8 +91,10 @@
   export let onBatchDeleteBookmarks: ((ids: number[]) => AsyncVoid) | undefined = undefined
   export let onSubmitSettings: ((payload: SettingsFormValue) => AsyncVoid) | undefined = undefined
   export let onChangePassword: ((payload: ChangePasswordReq) => AsyncVoid) | undefined = undefined
-  export let onSortCategories: SortHandler | undefined = undefined
+  export let onSortCategories: CategorySortHandler | undefined = undefined
   export let onSortBookmarks: SortHandler | undefined = undefined
+  // 切换后台标签时通知外层：访问分析需要强制拉取最新点击数据。
+  export let onSelectTab: ((tab: AdminTab) => AsyncVoid) | undefined = undefined
 
   export let importing = false
   export let backupError = ''
@@ -104,6 +106,7 @@
 
   function handleSelectTab(tab: AdminTab): void {
     activeTab = tab
+    void onSelectTab?.(tab)
   }
 
 </script>
@@ -178,6 +181,7 @@
     error={categoryError}
     mode={categoryModalMode}
     value={activeCategory}
+    {categories}
     onSubmit={onSubmitCategory}
     onCancel={onCloseCategoryModal}
     imageHostUrl={imageHostUrl}
@@ -321,6 +325,36 @@
     .admin-layout {
       gap: 16px;
     }
+  }
 
+  @media (max-width: 700px) {
+    .admin-page {
+      padding: 12px;
+      padding-bottom: calc(76px + env(safe-area-inset-bottom));
+      height: 100dvh;
+      grid-template-rows: auto 1fr;
+    }
+
+    .admin-layout {
+      flex-direction: column;
+      align-items: stretch;
+      height: 100%;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .admin-page {
+      height: auto;
+      min-height: 100dvh;
+      padding: 12px;
+      padding-bottom: calc(76px + env(safe-area-inset-bottom));
+      overflow: visible;
+    }
+
+    .admin-layout {
+      flex-direction: column;
+      align-items: stretch;
+      overflow: visible;
+    }
   }
 </style>

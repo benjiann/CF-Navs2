@@ -7,10 +7,10 @@ import {
   type Bookmark,
   type BookmarkUpsertReq,
   type Category,
+  type CategorySortReq,
   type CategoryUpsertReq,
   type ChangePasswordReq,
   type DataVersionResp,
-  type FaviconResp,
   type IconifySearchResp,
   type ImportReq,
   type ImportResp,
@@ -21,13 +21,9 @@ import {
   type PublicData,
   type Settings,
   type SettingsUpdateReq,
-  type SiteConfig,
+  type SiteMetaResp,
   type SortReq,
 } from '../../shared/types'
-
-export interface MeResp {
-  username: string
-}
 
 export interface StoredAuthSession extends LoginResp {}
 
@@ -159,10 +155,6 @@ export function setApiBaseUrl(baseUrl: string): void {
   apiBaseUrl = baseUrl || '/api'
 }
 
-export function getApiBaseUrl(): string {
-  return apiBaseUrl
-}
-
 export function getStoredAuthSession(): StoredAuthSession | null {
   if (!isBrowser()) {
     return null
@@ -245,10 +237,13 @@ export function getErrorMessage(error: unknown): string {
 
 export interface RequestOptions extends RequestInit {
   auth?: boolean
+  // 后台自动发起的请求应设为 true：用户没主动操作时，不该因为一次 401
+  // 就清掉登录态，把手上未保存的表单一起弄丢。
+  keepSessionOnUnauthorized?: boolean
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { auth = false, headers: initHeaders, ...init } = options
+  const { auth = false, keepSessionOnUnauthorized = false, headers: initHeaders, ...init } = options
   const headers = createHeaders(initHeaders)
 
   if (auth) {
@@ -280,7 +275,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   const envelope = isApiResponse<T>(payload) ? payload : null
 
   if (!response.ok) {
-    if (response.status === 401) {
+    if (response.status === 401 && !keepSessionOnUnauthorized) {
       clearStoredAuthSession()
     }
 
@@ -300,7 +295,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
 
   if (envelope.code !== ErrCode.OK) {
-    if (auth && envelope.code === ErrCode.UNAUTHORIZED) {
+    if (auth && envelope.code === ErrCode.UNAUTHORIZED && !keepSessionOnUnauthorized) {
       clearStoredAuthSession()
     }
 
@@ -340,13 +335,11 @@ export const installApi = {
     jsonRequest<LoginResp>('/install', 'POST', payload, false, { 'X-Setup-Token': setupToken }),
 }
 
-export const configApi = {
-  get: () => request<SiteConfig>('/config', { cache: 'no-store', headers: NO_CACHE_HEADERS }),
-}
-
 export const publicApi = {
   getData: (auth = false) =>
     request<PublicData>('/public/data', { auth, cache: 'no-store', headers: NO_CACHE_HEADERS }),
+  registerClick: (id: number) =>
+    request<null>(`/public/bookmarks/${id}/click`, { method: 'POST', keepalive: true }),
 }
 
 export const adminApi = {
@@ -357,20 +350,18 @@ export const authApi = {
   login: (payload: LoginReq) => jsonRequest<LoginResp>('/login', 'POST', payload),
   changePassword: (payload: ChangePasswordReq) => jsonRequest<null>('/password', 'POST', payload, true),
   logout: () => jsonRequest<null>('/logout', 'POST', undefined, true),
-  me: () => request<MeResp>('/me', { auth: true }),
 }
 
 export const categoriesApi = {
-  list: () => request<Category[]>('/categories', { auth: true }),
   create: (payload: CategoryUpsertReq) => jsonRequest<Category>('/categories', 'POST', payload, true),
   update: (id: number, payload: CategoryUpsertReq) => jsonRequest<Category>(`/categories/${id}`, 'PUT', payload, true),
   remove: (id: number) => request<null>(`/categories/${id}`, { method: 'DELETE', auth: true }),
   batchDelete: (ids: number[]) => jsonRequest<BatchDeleteCategoriesResp>('/categories/batch-delete', 'POST', { ids }, true),
-  sort: (ids: SortReq['ids']) => jsonRequest<null>('/categories/sort', 'POST', { ids }, true),
+  sort: (parentId: CategorySortReq['parent_id'], ids: CategorySortReq['ids']) =>
+    jsonRequest<null>('/categories/sort', 'POST', { parent_id: parentId, ids }, true),
 }
 
 export const bookmarksApi = {
-  list: () => request<Bookmark[]>('/bookmarks', { auth: true }),
   create: (payload: BookmarkUpsertReq) => jsonRequest<Bookmark>('/bookmarks', 'POST', payload, true),
   update: (id: number, payload: BookmarkUpsertReq) => jsonRequest<Bookmark>(`/bookmarks/${id}`, 'PUT', payload, true),
   refreshIconCache: (id: number) =>
@@ -378,7 +369,14 @@ export const bookmarksApi = {
   remove: (id: number) => request<null>(`/bookmarks/${id}`, { method: 'DELETE', auth: true }),
   batchDelete: (ids: number[]) => jsonRequest<BatchDeleteBookmarksResp>('/bookmarks/batch-delete', 'POST', { ids }, true),
   sort: (ids: SortReq['ids']) => jsonRequest<null>('/bookmarks/sort', 'POST', { ids }, true),
-  fetchFavicon: (url: string) => request<FaviconResp>(`/fetch-favicon?url=${encodeURIComponent(url)}`, { auth: true }),
+  checkHealth: (ids: number[]) =>
+    jsonRequest<Array<{ id: number; status: number | string; ok: boolean }>>('/bookmarks/check-health', 'POST', { ids }, true),
+  fetchSiteMeta: (url: string) =>
+    request<SiteMetaResp>(`/fetch-site-meta?url=${encodeURIComponent(url)}`, {
+      auth: true,
+      // 这是失焦时后台自动发起的，不能因为它把用户正在填的表单连同登录态一起清掉。
+      keepSessionOnUnauthorized: true,
+    }),
 }
 
 export const iconifyApi = {
@@ -386,7 +384,6 @@ export const iconifyApi = {
 }
 
 export const settingsApi = {
-  get: () => request<Settings>('/settings', { auth: true }),
   update: (payload: SettingsUpdateReq) => jsonRequest<Settings>('/settings', 'PUT', payload, true),
 }
 
@@ -396,9 +393,11 @@ export const dataApi = {
   importAll: (payload: ImportReq) => jsonRequest<ImportResp>('/import', 'POST', payload, true),
 }
 
+// 客户端只暴露实际在用的接口。GET /api/config、/api/me、/api/categories、
+// /api/bookmarks、/api/settings 这些服务端路由仍然保留（文档化契约 + 冒烟测试在用），
+// 只是前端已经改由 /api/admin/data 和 /api/public/data 聚合获取，不再单独调用。
 export const api = {
   install: installApi,
-  config: configApi,
   public: publicApi,
   admin: adminApi,
   auth: authApi,

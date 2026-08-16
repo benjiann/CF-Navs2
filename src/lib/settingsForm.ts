@@ -1,7 +1,11 @@
 import type { BackgroundPresetId, BackgroundSetting, SearchEngine, SearchEngineSetting, ThemeMode } from '../../shared/types'
 import type { SettingsFormValue } from './appData'
 import { parseCssColor, splitCssColorAlpha } from './color'
-import { gradientPresets, type GradientPresetId } from './themePresets'
+import {
+  gradientPresets,
+  type GradientPresetId,
+  type ThemeGradientPreset,
+} from './themePresets'
 
 export type SettingsFormModel = SettingsFormValue
 
@@ -77,6 +81,8 @@ export const emptySettingsForm: SettingsFormModel = {
   content_layout: { max_width: 1200, max_width_unit: 'px', margin_x: 0, margin_top: 0, margin_bottom: 0 },
   navigation: { position: 'left', always_expanded: false },
   footer_html: '',
+  most_visited_count: 8,
+  site_title_show: true,
 }
 
 export function cloneSettingsForm(source: SettingsFormModel): SettingsFormModel {
@@ -113,6 +119,8 @@ export function cloneSettingsForm(source: SettingsFormModel): SettingsFormModel 
     content_layout: { ...source.content_layout },
     navigation: { ...source.navigation },
     footer_html: source.footer_html,
+    most_visited_count: source.most_visited_count,
+    site_title_show: source.site_title_show,
   }
 }
 
@@ -127,12 +135,11 @@ function resolveBackgroundPresetId(
   lightBackground: BackgroundSetting | undefined,
   darkBackground: BackgroundSetting | undefined,
 ): BackgroundPresetId {
-  const presetId = normalizeBackgroundPresetId(source?.background_preset_id)
-  if (presetId !== 'custom') {
-    return presetId
-  }
+  const storedPresetId = source?.background_preset_id
+  const presetId = normalizeBackgroundPresetId(storedPresetId)
+  if (storedPresetId === 'custom' || presetId !== 'custom') return presetId
 
-  if (lightBackground && darkBackground) {
+  if (storedPresetId == null && lightBackground && darkBackground) {
     const normalizedLight = normalizeBackground(lightBackground, defaultLightBackground)
     const normalizedDark = normalizeBackground(darkBackground, defaultDarkBackground)
     const matched = gradientPresets.find((preset) => (
@@ -225,6 +232,8 @@ export function createSettingsFormState(
       always_expanded: navigation?.always_expanded ?? false,
     },
     footer_html: source?.footer_html ?? '',
+    most_visited_count: typeof source?.most_visited_count === 'number' ? source.most_visited_count : 8,
+    site_title_show: source?.site_title_show ?? true,
   }
 }
 
@@ -305,6 +314,8 @@ export function normalizeSettingsForm(source: SettingsFormModel): SettingsFormMo
       always_expanded: Boolean(source.navigation.always_expanded),
     },
     footer_html: source.footer_html.trim(),
+    most_visited_count: clampNumber(source.most_visited_count, 0, 20),
+    site_title_show: Boolean(source.site_title_show),
   }
 }
 
@@ -345,19 +356,59 @@ export function cloneBackgroundSetting(source: BackgroundSetting): BackgroundSet
   return { ...source }
 }
 
+export function shouldAutoExpandAppearanceAdvanced(
+  source: Pick<SettingsFormModel, 'background_preset_id'> | null | undefined,
+): boolean {
+  return normalizeBackgroundPresetId(source?.background_preset_id) === 'custom'
+}
+
+export function applyBackgroundPreset(
+  source: SettingsFormModel,
+  preset: ThemeGradientPreset,
+): SettingsFormModel {
+  const next = cloneSettingsForm(source)
+  next.background_preset_id = preset.id
+  next.backgrounds = {
+    light: cloneBackgroundSetting(preset.light),
+    dark: cloneBackgroundSetting(preset.dark),
+  }
+  next.background = cloneBackgroundSetting(next.theme === 'dark' ? preset.dark : preset.light)
+  next.card_background_color = preset.cardBackgroundColor
+  next.card_background_opacity = preset.cardBackgroundOpacity
+  next.card_text_color = preset.cardTextColor
+  next.site_title_color = preset.siteTitleColor
+  return next
+}
+
+export function markBackgroundPresetCustom(source: SettingsFormModel): SettingsFormModel {
+  const next = cloneSettingsForm(source)
+  next.background_preset_id = 'custom'
+  return next
+}
+
+export function applyCustomThemeBackground(
+  source: SettingsFormModel,
+  theme: 'light' | 'dark',
+  background: BackgroundSetting,
+): SettingsFormModel {
+  const next = markBackgroundPresetCustom(source)
+  next.backgrounds[theme] = cloneBackgroundSetting(background)
+  next.background = cloneBackgroundSetting(next.theme === 'dark' ? next.backgrounds.dark : next.backgrounds.light)
+  return next
+}
+
 function comparableText(value: string): string {
   return value.trim().replace(/\s+/g, ' ')
 }
 
 function backgroundPresetValueEquals(current: BackgroundSetting, target: BackgroundSetting): boolean {
-  return current.type === target.type && comparableText(current.value) === comparableText(target.value)
-}
-
-function findGradientPresetByBackgroundValues(source: SettingsFormModel) {
-  return gradientPresets.find((item) => (
-    backgroundPresetValueEquals(source.backgrounds.light, item.light) &&
-    backgroundPresetValueEquals(source.backgrounds.dark, item.dark)
-  ))
+  return (
+    current.type === target.type &&
+    comparableText(current.value) === comparableText(target.value) &&
+    current.blur === target.blur &&
+    current.mask === target.mask &&
+    comparableText(current.maskColor).toLowerCase() === comparableText(target.maskColor).toLowerCase()
+  )
 }
 
 export function getActiveGradientPresetId(source: SettingsFormModel): GradientPresetId | 'custom' {
@@ -365,5 +416,5 @@ export function getActiveGradientPresetId(source: SettingsFormModel): GradientPr
   if (presetId !== 'custom' && gradientPresets.some((item) => item.id === presetId)) {
     return presetId
   }
-  return findGradientPresetByBackgroundValues(source)?.id ?? 'custom'
+  return 'custom'
 }

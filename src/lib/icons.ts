@@ -310,9 +310,10 @@ export function logoSurfIcon(title: string, url: string, scheme: LogoSurfColorSc
   return `data:image/svg+xml;charset=utf-8,${encoded}`
 }
 
-export function googleIcon(url: string, size = 64): string {
+// 名字是历史遗留：早期用 Google s2，现在实际走 favicon.im，所以 size 参数不再有作用。
+export function googleIcon(url: string, _size = 64): string {
   const hostname = getHostname(url)
-  return hostname ? `https://www.google.com/s2/favicons?sz=${size}&domain=${encodeURIComponent(hostname)}` : ''
+  return hostname ? `https://favicon.im/${encodeURIComponent(hostname)}?larger=true` : ''
 }
 
 export function getIconCandidates(url: string, title: string): IconCandidate[] {

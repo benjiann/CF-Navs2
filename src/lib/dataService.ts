@@ -23,6 +23,7 @@ import {
 } from './appData'
 import {
   applySortOrder,
+  applyCategorySiblingSort,
   buildPublicDataAfterCategoryDelete,
   removeById,
   removeBookmarksByCategory,
@@ -38,7 +39,9 @@ import { createBookmarkIconCacheKey, writeBookmarkIconDataUri } from './localBoo
 import { adminStore, authStore, configStore, publicStore } from './stores'
 
 type DataServiceHooks = {
-  onRootError: (message: string) => void
+  // error 透传原始异常：调用方需要按 code/status 分辨「服务端挂了」和
+  // 「未登录 / 公开模式关闭」这类正常业务分支，只有消息字符串不够用。
+  onRootError: (message: string, error?: unknown) => void
   onLocalSnapshotRestored: () => void
   onNetworkFallback: (message: string) => void
 }
@@ -154,7 +157,7 @@ export async function refreshPublicData(progressive = false): Promise<PublicData
           }
 
           if (!isPublicModeForbidden(authError)) {
-            hooks.onRootError(getErrorMessage(authError))
+            hooks.onRootError(getErrorMessage(authError), authError)
             return null
           }
         }
@@ -171,7 +174,7 @@ export async function refreshPublicData(progressive = false): Promise<PublicData
       return get(publicStore).data
     }
 
-    hooks.onRootError(getErrorMessage(error))
+    hooks.onRootError(getErrorMessage(error), error)
     return null
   }
 }
@@ -298,14 +301,18 @@ export function refreshBookmarkIconCacheInBackground(bookmarkId: number): void {
   void refreshBookmarkIconCache(bookmarkId).catch(() => undefined)
 }
 
-export async function applyLocalCategorySort(ids: number[], refreshMissing = true): Promise<void> {
+export async function applyLocalCategorySort(
+  parentId: number | null,
+  ids: number[],
+  refreshMissing = true,
+): Promise<void> {
   await applyLocalDataMutation({
     updateAdmin: () => {
-      updateAdminCategoriesLocally((categories) => applySortOrder(categories, ids))
+      updateAdminCategoriesLocally((categories) => applyCategorySiblingSort(categories, parentId, ids))
     },
     updatePublic: (data) => ({
       ...data,
-      categories: applySortOrder(data.categories, ids),
+      categories: applyCategorySiblingSort(data.categories, parentId, ids),
     }),
     refreshMissing,
     persist: refreshMissing,

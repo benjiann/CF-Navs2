@@ -4,7 +4,6 @@ import {
   type ApiResponse,
   type DataVersionResp,
   type PublicData,
-  type Settings,
   type SiteConfig,
 } from '../../shared/types'
 import { toPublicSettings } from '../../shared/settings'
@@ -15,7 +14,7 @@ import {
   matchPublicDataCache,
   matchSiteConfigCache,
 } from '../lib/cache'
-import { getDataVersion, getPublicDataSource, getSiteConfig } from '../lib/db'
+import { getDataVersion, getPublicDataSource, getSiteConfig, getSiteConfigWithDataVersion, incrementBookmarkClick } from '../lib/db'
 import { shouldBypassRequestCache } from '../lib/requestCache'
 import { fail } from '../lib/response'
 import { ok } from '../lib/response'
@@ -79,7 +78,8 @@ publicRoutes.get('/config', async (c) => {
 
 publicRoutes.get('/data/version', async (c) => {
   const token = extractBearerToken(c.req.header('Authorization'))
-  const siteConfig = await getSiteConfig(c.env.DB)
+  // 每次页面加载都会走这里，所以站点配置和数据版本合并成一条 D1 查询。
+  const { config: siteConfig, version } = await getSiteConfigWithDataVersion(c.env.DB)
 
   if (!siteConfig.public_mode) {
     if (!token) {
@@ -103,7 +103,7 @@ publicRoutes.get('/data/version', async (c) => {
   }
 
   const data: DataVersionResp = {
-    version: await getDataVersion(c.env.DB),
+    version,
     site_title: siteConfig.site_title,
     public_mode: siteConfig.public_mode,
   }
@@ -201,6 +201,53 @@ publicRoutes.get('/public/data', async (c) => {
   }
 
   return response
+})
+
+import { getClientIp } from '../middleware/rateLimit'
+
+publicRoutes.post('/public/bookmarks/:id/click', async (c) => {
+  const id = Number(c.req.param('id'))
+  if (!Number.isInteger(id) || id <= 0) {
+    return c.json(fail(ErrCode.BAD_REQUEST, 'invalid id'), 400)
+  }
+
+  // OD-09: Click count rate limiting (max 3 clicks per 10 mins per IP+Bookmark ID)
+  if (c.env.SESSION) {
+    try {
+      const ip = getClientIp(c)
+      const rateLimitKey = `rl:click:${ip}:${id}`
+      const now = Date.now()
+      const raw = await c.env.SESSION.get(rateLimitKey)
+      let state = raw ? JSON.parse(raw) : null
+
+      if (state && state.resetAt > now) {
+        if (state.count >= 3) {
+          // Silent ignore, return success
+          return c.json(ok(null))
+        }
+        state.count++
+      } else {
+        state = { count: 1, resetAt: now + 600000 }
+      }
+
+      const ttl = Math.max(1, Math.ceil((state.resetAt - now) / 1000))
+      await c.env.SESSION.put(rateLimitKey, JSON.stringify(state), { expirationTtl: ttl })
+    } catch (err) {
+      console.error('Failed to apply click count rate limiting:', err)
+    }
+  }
+
+  try {
+    const success = await incrementBookmarkClick(c.env.DB, id)
+    if (!success) {
+      return c.json(fail(ErrCode.NOT_FOUND, 'bookmark not found'), 404)
+    }
+    // 点击计数不提升 data_version：每次点击都提升会让所有访客的公开数据缓存整体失效。
+    // 后台「访问分析」在打开时强制拉取最新聚合数据，因此这里无需破坏缓存。
+    return c.json(ok(null))
+  } catch {
+    return c.json(fail(ErrCode.SERVER_ERROR, 'failed to increment click count'), 500)
+  }
 })
 
 export default publicRoutes

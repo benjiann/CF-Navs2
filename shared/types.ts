@@ -5,6 +5,7 @@
 
 export interface Category {
   id: number
+  parent_id: number | null
   title: string
   icon: string | null
   sort: number
@@ -25,6 +26,7 @@ export interface Bookmark {
   description_mode?: DescriptionDisplayMode | null
   open_method: 1 | 2 | 3 // 1=新窗口 2=当前页 3=当前页弹层
   sort: number
+  click_count?: number
   created_at: number
 }
 
@@ -145,6 +147,8 @@ export interface Settings {
   content_layout: ContentLayoutSetting
   navigation: NavigationSetting
   footer_html: string
+  most_visited_count: number
+  site_title_show: boolean
 }
 
 // ========== API 统一响应包络 ==========
@@ -164,6 +168,7 @@ export const ErrCode = {
   NOT_FOUND: 1003, // 资源不存在
   RATE_LIMITED: 1004, // 登录限流
   FORBIDDEN: 1005, // 公开模式关闭且未登录
+  CONFLICT: 1006, // 当前资源状态不允许该操作
   SERVER_ERROR: 1500,
 } as const
 
@@ -263,6 +268,10 @@ export interface PublicSettings {
   content_layout: ContentLayoutSetting
   navigation: NavigationSetting
   footer_html: string
+  custom_css: string
+  custom_js: string
+  most_visited_count: number
+  site_title_show: boolean
 }
 
 // GET /api/config （极简公开配置，登录页用）
@@ -275,6 +284,7 @@ export interface SiteConfig {
 export interface CategoryUpsertReq {
   title: string
   icon?: string | null
+  parent_id?: number | null
 }
 
 // POST/PUT 书签
@@ -293,6 +303,13 @@ export interface BookmarkUpsertReq {
 // GET /api/fetch-favicon?url=...
 export interface FaviconResp {
   icon: string // 解析到的“直接”图标 URL（方式1；失败回退 Google）
+}
+
+// GET /api/fetch-site-meta?url=...
+// 新增书签时解析站点名称。接口不会失败：解析不出来时 title 为去掉 www. 的域名。
+export interface SiteMetaResp {
+  title: string // 站点名称：根地址优先 og:site_name，深层链接优先 og:title/<title>
+  final_url: string // 跟随重定向后的最终地址
 }
 
 // GET /api/iconify-search?query=...
@@ -316,6 +333,10 @@ export interface IconifySearchResp {
 // 传有序 id 数组，后端按下标写 sort
 export interface SortReq {
   ids: number[]
+}
+
+export interface CategorySortReq extends SortReq {
+  parent_id: number | null
 }
 
 // ========== 数据备份 / 导入导出 ==========

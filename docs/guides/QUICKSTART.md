@@ -38,26 +38,40 @@ npx wrangler kv namespace create SESSION
 npm run setup:wrangler
 ```
 
-### 4. 设置一次性安装令牌
+### 4. 首次部署
+
+```bash
+npm run deploy
+```
+
+- 首轮部署完成后再设置 Secret；Worker 尚未创建时，不能用 `wrangler secret put` 提前写入。
+
+### 5. 设置一次性安装令牌
 
 ```bash
 npx wrangler secret put SETUP_TOKEN
 # 输入足够长的随机值，并安全保存到完成安装
 ```
 
-### 5. 部署
+### 6. Secret 生效后重新部署
 
 ```bash
 npm run deploy
 ```
 
-### 6. 完成安装
+### 7. 完成安装
 
 访问返回的 Workers URL 并打开 `/install`，输入 `SETUP_TOKEN`，再创建管理员用户名和密码。安装器会初始化数据库 schema；确认登录成功后，建议删除或轮换 `SETUP_TOKEN`。
 
 `npm run db:init:remote` 仅作为安装器无法初始化 schema 时的恢复命令，不是全新 CLI 部署的正常步骤。
 
-部署新版后建议强制刷新一次页面，让新版 Service Worker 接管。验证首页搜索时，输入关键词应直接筛选书签区域；打开浏览器 Network 面板时，刷新首页、上下滚动、搜索筛选和后台切回首页不应让已缓存的普通书签图标重复请求 `/api/icon/*`，分类图标可显示为 `/api/category-icon/*`，后台预览和新增/编辑弹窗中的 Iconify 图标应显示为 `/api/iconify/*`。编辑书签时弹窗应立即显示，随后可在后台调用 `/api/bookmarks/:id/icon-cache/refresh` 刷新普通书签图标缓存；保存书签后也会显式刷新。该请求遇到慢速外站图标时不应长时间卡住保存流程；如果缓存失败但保存的是 `https://favicon.im/...`、Google favicon 或自定义 HTTP(S) 图标，首页仍应使用已保存 URL 显示图标，而不是退成标题首字。首页展示已保存的 Iconify 图标时可直接请求 `api.iconify.design` 并依赖浏览器 HTTP 缓存，但新增/编辑弹窗中的 Iconify 候选、手动预览和从 `icon-sets.iconify.design` 粘贴的页面链接应走 `/api/iconify/*`。
+部署新版后建议强制刷新一次页面，让新版 Service Worker 接管。首页应同时展示所有一级分类分组；每组默认显示直属书签，一级标题后用括号显示总站点数，二级分类横向标签继续紧随其后，点击后只替换当前分组内容。管理员的新增书签和排序操作与标题保持同一行。输入搜索关键词后应切换到全站一级分类分组结果，清除关键词后恢复各分组此前选择的分类。
+
+在“站点设置”中修改配置时，右侧首页预览会使用未保存的表单值实时展示浅色/深色主题、首页标题、经常访问区域、卡片和布局效果；预览中的自定义 CSS 与页脚 HTML 只在隔离环境中检查，不会执行脚本或保存数据。首页打开书签后会累计点击次数，进入后台“访问分析”会刷新数据并显示总点击、已访问/零访问书签、Top 20 排行和零访问书签分页。
+
+一级标题、二级标签、搜索分组和折叠导航应显示已保存的分类图片、data URI、文字或表情图标。打开浏览器 Network 面板时，刷新首页、上下滚动、搜索和后台切回首页不应让已缓存的普通书签图标重复请求 `/api/icon/*`；HTTP(S) 分类图片可请求 `/api/category-icon/*`，后台预览和新增/编辑弹窗中的 Iconify 图标应请求 `/api/iconify/*`。首页展示已保存的 Iconify 书签图标时可直接请求 `api.iconify.design` 并依赖浏览器 HTTP 缓存，但新增/编辑弹窗中的 Iconify 候选、手动预览和从 `icon-sets.iconify.design` 粘贴的页面链接应走 `/api/iconify/*`。
+
+编辑书签时弹窗应立即显示，随后可在后台调用 `/api/bookmarks/:id/icon-cache/refresh` 刷新普通书签图标缓存；保存书签后也会显式刷新。该请求遇到慢速外站图标时不应长时间卡住保存流程；如果缓存失败但保存的是 `https://favicon.im/...`、Google favicon 或自定义 HTTP(S) 图标，首页仍应使用已保存 URL 显示图标，而不是退成标题首字。
 
 ## 方式二：Cloudflare 控制台在线部署
 
@@ -69,16 +83,17 @@ npm run deploy
 npx wrangler deploy
 ```
 
-4. 保存并部署。Cloudflare 的 Git 引导流程会根据 `wrangler.toml` 中不带 ID 的声明创建并绑定 `DB` D1 数据库与 `SESSION` KV 命名空间。待部署完成后，进入该 Worker 的 **设置 → 变量和密钥**，添加一个类型为**密钥**的变量，变量名填写 `SETUP_TOKEN`，值填写一段足够长且随机的字符串。
+4. 保存并完成首轮生产部署。Cloudflare 的 Git 引导流程会根据 `wrangler.toml` 中不带 ID 的声明创建并绑定 `DB` D1 数据库与 `SESSION` KV 命名空间。
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/lbjxr/CF-Navs/main/docs/screenshots/cf-deploy3.jpg" alt="在 Cloudflare Worker 中添加 SETUP_TOKEN 密钥" width="100%">
 </p>
 
-5. 打开部署后的 Workers URL，并访问 `/install`。输入 `SETUP_TOKEN`，再设置管理员用户名和密码；安装器会初始化数据库 schema 和管理员账号。
-6. 进入该 Worker 的 **域和路由** 页面，关闭两个 Workers URL，然后添加并启用你的自定义域名。
+5. 首轮部署完成后，在该 Worker 的 **设置 → 变量和密钥** 中选择**生产环境**，添加一个类型为**密钥**的变量，变量名填写 `SETUP_TOKEN`，值填写一段足够长且随机的字符串。
+6. 保存 Secret 后重新触发生产分支部署。打开部署后的 Workers URL，并访问 `/install`。输入 `SETUP_TOKEN`，再设置管理员用户名和密码；安装器会初始化数据库 schema 和管理员账号。
+7. 进入该 Worker 的 **域和路由** 页面，关闭两个 Workers URL，然后添加并启用你的自定义域名。
 
-正常路径无需 Cloudflare API Token、GitHub Actions 或手动 SQL；只有安装器报 schema 初始化错误时，才在 D1 SQL Console 执行 [schema.sql](../../schema.sql) 进行恢复。首次部署请从生产分支 `main` 触发，资源创建完成前不要使用预览分支自动部署。
+`package.json` 的 Cloudflare Git 元数据只声明 D1/KV 资源，不声明 `SETUP_TOKEN` 或旧版恢复 Secret，因此 GitHub 导入不会自动生成或填充 Secret 参数。正常路径无需 Cloudflare API Token、GitHub Actions 或手动 SQL；只有安装器报 schema 初始化错误时，才在 D1 SQL Console 执行 [schema.sql](../../schema.sql) 进行恢复。首次部署请从生产分支 `main` 触发，资源创建完成前不要使用预览分支自动部署。
 
 ## 🔑 首次登录
 
@@ -98,13 +113,15 @@ npx wrangler deploy
 
 ## 📝 下一步
 
-- 修改站点标题
-- 设置首页标题颜色和文字大小
+- 在“站点信息”中修改标题、标题颜色和字号
+- 如需外部上传入口，在“站点信息 → 外部资源”配置图床服务地址
 - 添加书签和分类
 - 新增书签时选择文字图标配色方案
 - 登录后在首页右键书签进行快捷编辑
-- 自定义背景和主题
+- 在“外观与卡片”中选择配色、卡片展示方式；需要时展开背景、尺寸和卡片表面高级设置
 - 配置搜索引擎
+- 在“站点信息”中配置首页标题显示、搜索框、搜索引擎选择器和“经常访问”展示数量
+- 在“访问分析”中查看书签点击排行与零访问书签
 
 完整功能说明请查看 [README.md](../../README.md)。
 

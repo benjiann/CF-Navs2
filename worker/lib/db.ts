@@ -13,6 +13,8 @@ export {
   deleteCategory,
   batchDeleteCategories,
   sortCategories,
+  CategoryConflictError,
+  CategoryValidationError,
 } from './db/categories'
 
 export {
@@ -24,6 +26,7 @@ export {
   batchDeleteBookmarks,
   sortBookmarks,
   setIconBlob,
+  incrementBookmarkClick,
   type BookmarkIconData,
 } from './db/bookmarks'
 
@@ -32,6 +35,7 @@ export { getPublicDataSource, getAdminData } from './db/aggregates'
 export {
   getSettings,
   getSiteConfig,
+  getSiteConfigWithDataVersion,
   getSettingValues,
   setSettingValue,
   getDataVersion,

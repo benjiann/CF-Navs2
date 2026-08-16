@@ -8,8 +8,16 @@
     type IconCandidate,
     type LogoSurfColorScheme,
   } from '../lib/icons'
-  import { getErrorMessage, iconifyApi } from '../lib/api'
+  import { api, getErrorMessage, iconifyApi } from '../lib/api'
+  import {
+    createBookmarkTitleState,
+    resolveBookmarkTitleError,
+    resolveBookmarkTitleSuccess,
+    scheduleBookmarkTitleLookup,
+    type BookmarkTitleState,
+  } from '../lib/bookmarkTitleController'
   import type { BookmarkFormValue } from '../lib/adminTypes'
+  import type { CategoryTreeOption } from '../lib/categorySelect'
   import {
     buildBookmarkSubmitPayload,
     createBookmarkFormValue,
@@ -40,17 +48,12 @@
   import LogoSchemeSelector from './LogoSchemeSelector.svelte'
   import type { IconifyCandidate as IconifySearchCandidate } from '../../shared/types'
 
-  type BookmarkCategoryOption = {
-    id: string | number
-    title: string
-  }
-
   export let open = false
   export let loading = false
   export let error = ''
   export let mode: 'create' | 'edit' = 'create'
   export let value: Partial<BookmarkFormValue> | null = null
-  export let categories: BookmarkCategoryOption[] = []
+  export let categories: CategoryTreeOption[] = []
   export let onSubmit: ((payload: BookmarkFormValue) => void | Promise<void>) | undefined = undefined
   export let onCancel: (() => void) | undefined = undefined
   export let onDelete: ((bookmark: { id: string | number; title: string }) => void | Promise<void>) | undefined = undefined
@@ -66,6 +69,7 @@
   let confirmedIconifyName = ''
   let iconifySearchState: BookmarkIconifySearchState = createBookmarkIconifySearchState()
   let iconifySearchTimer: ReturnType<typeof setTimeout> | null = null
+  let titleLookupState: BookmarkTitleState = createBookmarkTitleState()
   let previousBodyOverflow: string | null = null
   let previousDocumentOverflow: string | null = null
 
@@ -73,7 +77,7 @@
   let candidates: IconCandidate[] = []
   let candidateError = ''
 
-  $: nextKey = JSON.stringify({ open, mode, value, categoryIds: categories.map((item) => item.id) })
+  $: nextKey = JSON.stringify({ open, mode, value, categories })
   $: setPageScrollLocked(open)
   $: if (nextKey !== formKey) {
     formKey = nextKey
@@ -91,6 +95,8 @@
     iconifyUseConfirmed = iconifySelection.iconifyUseConfirmed
     confirmedIconifyName = iconifySelection.confirmedIconifyName
     iconifySearchState = createBookmarkIconifySearchState()
+    // 弹窗是单例，requestId 必须接着上一轮往下走，否则上一轮在途的响应会污染新表单。
+    titleLookupState = createBookmarkTitleState(titleLookupState.requestId)
     // 编辑模式也重新生成候选
     if (form.url.trim()) {
       candidates = getIconCandidates(form.url.trim(), form.title.trim())
@@ -168,6 +174,42 @@
       iconifySearchState = resolveBookmarkIconifySearchError(iconifySearchState, {
         requestId,
         error: getErrorMessage(searchError),
+      })
+    }
+  }
+
+  function handleUrlBlur() {
+    const result = scheduleBookmarkTitleLookup(titleLookupState, {
+      mode,
+      url: form.url,
+      title: form.title,
+    })
+    if (!result.changed) return
+
+    titleLookupState = result.state
+    if (!result.task) return
+
+    void loadSiteTitle(result.task.url, result.task.requestId)
+  }
+
+  async function loadSiteTitle(url: string, requestId: number) {
+    try {
+      const meta = await api.bookmarks.fetchSiteMeta(url)
+      const resolved = resolveBookmarkTitleSuccess(titleLookupState, {
+        requestId,
+        title: meta.title,
+        // 在 resolve 时读 form.title：请求在途期间用户可能已经自己打了标题。
+        currentTitle: form.title,
+      })
+      titleLookupState = resolved.state
+      if (resolved.title) {
+        form.title = resolved.title
+      }
+    } catch (lookupError) {
+      // 自动解析失败不打扰用户：手动输入标题始终可用。
+      titleLookupState = resolveBookmarkTitleError(titleLookupState, {
+        requestId,
+        error: getErrorMessage(lookupError),
       })
     }
   }
@@ -303,6 +345,8 @@
           bind:descriptionMode={form.description_mode}
           {categories}
           {loading}
+          titleLoading={titleLookupState.loading}
+          onUrlBlur={handleUrlBlur}
         />
 
         <BookmarkIconCandidatePicker
@@ -416,7 +460,7 @@
     min-height: 0;
     overflow: hidden;
     overscroll-behavior: contain;
-    border-radius: 18px;
+    border-radius: var(--radius-xl);
     background: #ffffff;
     box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
     padding: 0;

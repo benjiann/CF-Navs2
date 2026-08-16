@@ -28,10 +28,12 @@ npm run build && npx wrangler deploy
 
 ### `/install` 提示安装令牌无效
 
-1. 确认 Worker 的 **设置 → 变量和密钥** 中存在类型为**密钥**的变量 `SETUP_TOKEN`，名称大小写完全一致。
-2. 确认输入值没有前后空格；如果修改了密钥，请等待 Cloudflare 保存完成后重新打开 `/install` 检查。
-3. 不要把管理员密码填到 `SETUP_TOKEN`；安装令牌仅用于授权一次安装，管理员密码在 `/install` 页面另行设置。
-4. 如果站点已经安装完成，则不再需要 `SETUP_TOKEN`。`GET /api/install/status` 可公开检查安装状态，删除 Secret 不影响运行；后续安装请求仍会被永久拒绝。
+1. 确认当前访问的域名属于正在部署的同一个 Worker，不是另一个 Worker、Pages 项目或旧的自定义域名路由。
+2. 确认 Worker 的 **设置 → 变量和密钥** 中选择的是**生产环境**，存在类型为**密钥**的变量 `SETUP_TOKEN`，名称大小写完全一致；预览环境的 Secret 不会自动提供给生产流量。
+3. GitHub 导入器不应自动生成 `SETUP_TOKEN` 参数；该名称不在 `package.json` 的 Cloudflare 资源元数据中。首轮部署不要求这个 Secret，部署完成后必须手动创建生产环境 Secret，并重新触发 `main` 生产分支部署；如果仍返回 `setup_token_missing`，优先检查部署目标和访问域名是否一致。
+4. 确认输入值没有前后空格；不要把管理员密码填到 `SETUP_TOKEN`。安装令牌仅用于授权一次安装，管理员密码在 `/install` 页面另行设置。
+5. 可直接请求 `GET /api/install/status` 检查运行时状态：返回 `needs_install` 表示 Worker 已读到 Secret；返回 `configuration_required` / `setup_token_missing` 表示当前处理请求的 Worker 环境没有读到 Secret。
+6. 如果站点已经安装完成，则不再需要 `SETUP_TOKEN`。安装状态检查不要求令牌，删除 Secret 不影响运行；后续安装请求仍会被永久拒绝。
 
 ### `/install` 提示数据库初始化失败
 
@@ -194,14 +196,16 @@ npx wrangler d1 execute cf-navs-db --remote --command "SELECT key, value FROM se
 
 ## 线上 Chrome 验证异常
 
-如果 Codex/自动化环境中没有暴露 Chrome 插件要求的 Node REPL 工具，可以启动独立 Chrome 调试端口后直接使用 CDP 验证线上站点。
+如果 Codex/自动化环境中没有暴露 Chrome 插件要求的 Node REPL 工具，启动带唯一 `--user-data-dir` 的独立 Chrome 调试端口后直接使用 CDP 验证线上站点。不要连接宿主机日常使用的 Chrome 或默认 profile。
 
 关键注意点：
 
+- 复用已有 DevTools 端点只适用于当前任务明确授权的专用测试浏览器；结束时只关闭测试 target，不能调用 `Browser.close`。
 - `Chrome /json/new` 在新版本中使用 `PUT`，不要用 `GET`。
 - `curl` 在 PowerShell 中拼 JSON 登录体容易引号转义失败，建议用 Node `fetch` 或页面上下文 `fetch`。
 - 右键菜单验证使用 CDP `Input.dispatchMouseEvent` 的 right button 事件，比直接 `dispatchEvent` 更接近真实操作。
-- 验证完成后关闭带 `--user-data-dir=D:\tmp\cf-navs-chrome-profile-*` 的 Chrome 进程，避免残留测试 profile。
+- 验证完成后只清理本次启动并记录了精确 profile 的 Chrome 进程。不要使用按进程名关闭全部 Chrome 的命令。
+- 移动端背景边界验证使用约 `390x844` 的视口，分别检查初始位置、页面中段和 `scrollY = scrollHeight - innerHeight` 的底部位置；渐变和背景图片都必须覆盖视口，不能在顶部或底部出现白色根画布。检查 `html` 根节点的首页背景变量是否与当前主题一致，并同时记录控制台错误、页面异常和失败请求。
 
 常规验收项：
 

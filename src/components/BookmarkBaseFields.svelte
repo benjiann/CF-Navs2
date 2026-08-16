@@ -1,10 +1,7 @@
 <script lang="ts">
   import type { BookmarkFormValue } from '../lib/adminTypes'
-
-  type BookmarkCategoryOption = {
-    id: string | number
-    title: string
-  }
+  import type { CategoryTreeOption } from '../lib/categorySelect'
+  import CategoryTreeSelect from './CategoryTreeSelect.svelte'
 
   export let categoryId: string | number | undefined = undefined
   export let title = ''
@@ -12,31 +9,41 @@
   export let openMethod: BookmarkFormValue['open_method'] = 'new_tab'
   export let description = ''
   export let descriptionMode: BookmarkFormValue['description_mode'] = 'inherit'
-  export let categories: BookmarkCategoryOption[] = []
+  export let categories: CategoryTreeOption[] = []
   export let loading = false
+  export let titleLoading = false
+  export let onUrlBlur: (() => void) | undefined = undefined
 </script>
 
-<label class="field-compact">
+<div class="field-compact field-label">
   <span>所属分类</span>
-  <select class="native-select" bind:value={categoryId} disabled={loading || categories.length === 0} required>
-    {#if categories.length === 0}
-      <option value="">暂无分类可选</option>
-    {:else}
-      {#each categories as category}
-        <option value={category.id}>{category.title}</option>
-      {/each}
-    {/if}
-  </select>
-</label>
+  <CategoryTreeSelect
+    bind:value={categoryId}
+    items={categories}
+    disabled={loading || categories.length === 0}
+    ariaLabel="选择所属分类"
+    compact
+    testId="bookmark-category-tree-select"
+  />
+</div>
 
 <label class="field-compact">
-  <span>书签标题</span>
+  <span>
+    书签标题
+    {#if titleLoading}<small class="field-hint">解析中…</small>{/if}
+  </span>
   <input bind:value={title} type="text" placeholder="例如：Svelte 官方网站" required />
 </label>
 
 <label class="field-compact">
   <span>链接地址</span>
-  <input bind:value={url} type="url" placeholder="https://example.com" required />
+  <input
+    bind:value={url}
+    type="url"
+    placeholder="https://example.com"
+    required
+    on:blur={() => onUrlBlur?.()}
+  />
 </label>
 
 <label class="field-compact">
@@ -72,8 +79,23 @@
     font-size: 13px;
   }
 
+  .field-label {
+    display: grid;
+    min-width: 0;
+    gap: 4px;
+    color: #334155;
+    font-size: 13px;
+  }
+
   .field-compact {
     grid-column: span 1;
+  }
+
+  .field-hint {
+    margin-left: 6px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 400;
   }
 
   input,
@@ -82,9 +104,9 @@
     width: 100%;
     box-sizing: border-box;
     border: 1px solid #cbd5e1;
-    border-radius: 9px;
-    padding: 6px 9px;
-    font-size: 13px;
+    border-radius: var(--radius-lg);
+    padding: var(--control-padding-input-sm);
+    font-size: var(--font-size-base);
     color: #0f172a;
     background: #ffffff;
     font-family: inherit;

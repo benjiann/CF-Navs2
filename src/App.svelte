@@ -3,7 +3,6 @@
   import { get } from 'svelte/store'
   import { fade } from 'svelte/transition'
   import {
-    type AdminData,
     type Bookmark,
     type Category,
     type ChangePasswordReq,
@@ -17,7 +16,7 @@
   import { clearCachedAdminData } from './lib/adminDataCache'
   import { clearCachedPublicData } from './lib/publicDataCache'
   import { toastStore } from './lib/toast'
-  import type { BookmarkFormValue, CategoryFormValue } from './lib/adminTypes'
+  import type { AdminTab, BookmarkFormValue, CategoryFormValue } from './lib/adminTypes'
   import { toBookmarkForm, toBookmarkPayload, toCategoryForm, toCategoryPayload } from './lib/adminFormAdapters'
   import {
     createImportExportState,
@@ -41,6 +40,11 @@
   } from './lib/appData'
   import { createLazyComponentLoader } from './lib/appLazyComponent'
   import {
+    createBrowserCustomScriptHost,
+    createCustomScriptController,
+    type CustomScriptController,
+  } from './lib/customScript'
+  import {
     canUseInstalledFallback,
     getInstallViewState,
     hasInstalledHint,
@@ -49,13 +53,22 @@
     normalizeInstallError,
     replaceBrowserPath,
     setInstalledHint,
+    shouldProbeInstallStatus,
+    shouldRecheckInstallAfterDataError,
     toInstallScreenState,
     type InstallScreenState,
   } from './lib/appInstall'
   import { buildOrderedBookmarkIdsForCategory } from './lib/appLocalData'
   import { createBookmarkDraft, createCategoryDraft, findBookmarkForEdit } from './lib/appModalState'
-  import { canSeeHomeView, createHomeGateState, shouldOpenLoginGate, type AppView } from './lib/appNavigation'
+  import {
+    canSeeHomeView,
+    createHomeGateState,
+    shouldOpenLoginGate,
+    shouldRevealHomeFromLocalSnapshot,
+    type AppView,
+  } from './lib/appNavigation'
   import { createOptimisticSortState, runOptimisticSort } from './lib/appSortQueue'
+  import { getAdminBookmarkCategoryOptions } from './lib/adminListState'
   import { getNextThemePreference, resolveAppThemeState } from './lib/appThemeState'
   import type { ImportSource } from './lib/importData'
   import { pruneBookmarkIconCacheStorageBackedByLocalStorage } from './lib/localBookmarkIconCache'
@@ -80,10 +93,17 @@
   } from './lib/dataService'
 
   type SettingsSubset = SettingsFormValue
+  const ROOT_HOME_BACKGROUND_PROPERTIES = [
+    '--home-background',
+    '--home-background-mask',
+    '--home-background-mask-color',
+  ]
 
   let booting = true
   let installState: InstallScreenState = { type: 'checking' }
   let rootError = ''
+  // 数据加载失败时的原始异常，用来判断是否需要回头复核安装状态。
+  let lastDataError: unknown = null
   let currentView: AppView = 'home'
 
   function isAdminPath(): boolean {
@@ -140,15 +160,18 @@
   let bookmarkError = ''
   let settingsError = ''
 
-  const importExportState = createImportExportState()
+  let importExportState = createImportExportState()
   let preferredThemeMode: ThemeMode | null = null
   let prefersReducedMotion = false
+  // 只在浏览器里创建：SSR/测试环境没有 document 和 URL.createObjectURL。
+  let customScriptController: CustomScriptController | null = null
   const categorySortState = createOptimisticSortState()
   const bookmarkSortState = createOptimisticSortState()
 
   configureDataService({
-    onRootError: (message) => {
+    onRootError: (message, error) => {
       rootError = message
+      lastDataError = error
     },
     onLocalSnapshotRestored: () => {
       revealHomeFromCurrentData()
@@ -192,7 +215,28 @@
   $: if (typeof document !== 'undefined') {
     document.documentElement.dataset.theme = activeTheme
     document.documentElement.dataset.backgroundPreset = publicData?.settings.background_preset_id ?? 'custom'
+
+    // Mobile overscroll exposes the root canvas outside the fixed homepage layers.
+    const parsedHomeBackground = document.createElement('div').style
+    parsedHomeBackground.cssText = homeBackgroundStyle
+    for (const property of ROOT_HOME_BACKGROUND_PROPERTIES) {
+      document.documentElement.style.setProperty(property, parsedHomeBackground.getPropertyValue(property))
+    }
+
+    // OD-01: Custom CSS injection
+    let styleTag = document.getElementById('custom-css-inject');
+    if (!styleTag) {
+      styleTag = document.createElement('style');
+      styleTag.id = 'custom-css-inject';
+      document.head.appendChild(styleTag);
+    }
+    styleTag.textContent = publicData?.settings?.custom_css ?? '';
   }
+
+  // 自定义 JS 单独走一条响应式语句：上面那个块还依赖 activeTheme 和
+  // homeBackgroundStyle，写在里面的话切个主题就会把用户脚本重跑一遍。
+  // controller 内部还做了幂等，即使这条语句被多余触发也不会重复执行。
+  $: customScriptController?.apply(publicData?.settings?.custom_js)
 
   function setPreferredThemeMode(mode: ThemeMode): void {
     preferredThemeMode = mode
@@ -280,6 +324,16 @@
     }
   }
 
+  async function handleAdminTabChange(tab: AdminTab): Promise<void> {
+    if (tab !== 'analytics') return
+
+    try {
+      await refreshLoggedInData(true)
+    } catch (error) {
+      rootError = getErrorMessage(error)
+    }
+  }
+
   function getInstallHintStorage(): Storage | null {
     if (typeof window === 'undefined') return null
 
@@ -297,15 +351,23 @@
   async function enterInstalledApp(session: Awaited<ReturnType<typeof api.install.install>> | null): Promise<void> {
     await Promise.all([clearCachedAdminData(), clearCachedPublicData()])
     rememberInstalled(true)
-    authStore.setSession(session, session ? { username: session.username } : null)
+    authStore.setSession(session)
     replaceBrowserPath('/')
     installState = { type: 'checking' }
     await initializeApp(true)
   }
 
-  async function checkInstallStatus(): Promise<boolean> {
-    installState = { type: 'checking' }
+  async function checkInstallStatus(forceProbe = false): Promise<boolean> {
     const installedHint = hasInstalledHint(getInstallHintStorage())
+    const pathname = typeof window === 'undefined' ? '/' : window.location.pathname
+
+    // 浏览器已经记住装过时直接放行：这个探测过去无条件串行阻塞在数据加载之前，
+    // 每次打开页面白白多一个网络往返。标记过期的情况由 recheckInstallAfterDataError 兜底。
+    if (!shouldProbeInstallStatus({ installedHint, pathname, forceProbe })) {
+      return true
+    }
+
+    installState = { type: 'checking' }
 
     try {
       const status = await api.install.status()
@@ -343,6 +405,13 @@
     }
   }
 
+  // 跳过启动探测的代价：数据库被重置或重新绑定后，本地的「装过」标记会过期。
+  // 数据加载因服务端错误失败时回头复核一次，把用户带回安装页。
+  async function recheckInstallAfterDataError(error: unknown): Promise<boolean> {
+    if (!shouldRecheckInstallAfterDataError(error)) return false
+    return !await checkInstallStatus(true)
+  }
+
   async function handleInstall(value: { setupToken: string; username: string; password: string }): Promise<void> {
     if (installState.type !== 'pending' || installState.status.state !== 'needs_install') return
 
@@ -372,6 +441,7 @@
   async function initializeApp(installStatusKnown = false): Promise<void> {
     booting = true
     rootError = ''
+    lastDataError = null
 
     if (!installStatusKnown && !await checkInstallStatus()) {
       return
@@ -393,6 +463,7 @@
           adminStore.reset()
           await clearCachedAdminData()
         } else {
+          if (await recheckInstallAfterDataError(error)) return
           rootError = getErrorMessage(error)
         }
 
@@ -400,6 +471,7 @@
       }
     } else {
       await refreshPublicData(true)
+      if (rootError && await recheckInstallAfterDataError(lastDataError)) return
     }
 
     const homeGate = createHomeGateState({
@@ -421,17 +493,19 @@
   }
 
   function revealHomeFromCurrentData(): void {
-    if (!booting) return
-
     const homeGate = createHomeGateState({
       publicMode: get(configStore).data?.public_mode,
       authenticated: isLoggedIn(),
     })
-    if (homeGate.view === 'home') {
-      loginModalOpen = false
-      currentView = 'home'
-      booting = false
-    }
+    if (!shouldRevealHomeFromLocalSnapshot({
+      booting,
+      adminPath: isAdminPath(),
+      homeView: homeGate.view,
+    })) return
+
+    loginModalOpen = false
+    currentView = 'home'
+    booting = false
   }
 
   function resetCategoryState(): void {
@@ -595,14 +669,20 @@
   }
 
   async function handleDeleteCategory(category: { id: string | number; title: string }): Promise<void> {
-    const confirmed = await requestConfirmation(createDeleteCategoryConfirmation(category.title))
+    const categoryId = Number(category.id)
+    const directBookmarkCount = adminData.bookmarks.filter((bookmark) => bookmark.category_id === categoryId).length
+    const childCategoryCount = adminData.categories.filter((item) => item.parent_id === categoryId).length
+    const confirmed = await requestConfirmation(createDeleteCategoryConfirmation(
+      category.title,
+      directBookmarkCount,
+      childCategoryCount,
+    ))
     if (!confirmed) return
 
     deletingCategoryId = Number(category.id)
     categoryError = ''
 
     try {
-     const categoryId = Number(category.id)
      await api.categories.remove(categoryId)
      await applyLocalCategoryDelete(categoryId)
       await refreshAdminDataAfterMutation()
@@ -723,7 +803,10 @@
   async function handleBatchDeleteCategories(ids: number[]): Promise<void> {
     if (ids.length === 0) return
     const bookmarkCount = adminData.bookmarks.filter((bookmark) => ids.includes(bookmark.category_id)).length
-    if (!await requestConfirmation(createBatchDeleteConfirmation('category', ids.length, bookmarkCount))) return
+    const childCategoryCount = adminData.categories.filter((category) => (
+      category.parent_id != null && ids.includes(category.parent_id)
+    )).length
+    if (!await requestConfirmation(createBatchDeleteConfirmation('category', ids.length, bookmarkCount, childCategoryCount))) return
     try {
       const result = await api.categories.batchDelete(ids)
       if (result.deleted > 0 || result.deleted_bookmarks > 0) await refreshAdminDataAfterMutation()
@@ -764,12 +847,12 @@
     currentView = 'login'
   }
 
-  async function handleSortCategories(ids: Array<string | number>): Promise<void> {
+  async function handleSortCategories(parentId: number | null, ids: Array<string | number>): Promise<void> {
     categoryError = ''
 
     await runOptimisticSort(categorySortState, ids, {
-      applyLocalSort: (sortedIds) => applyLocalCategorySort(sortedIds, false),
-      saveRemoteSort: (sortedIds) => api.categories.sort(sortedIds),
+      applyLocalSort: (sortedIds) => applyLocalCategorySort(parentId, sortedIds, false),
+      saveRemoteSort: (sortedIds) => api.categories.sort(parentId, sortedIds),
       persist: persistCurrentAdminData,
       onSuccess: refreshAdminDataAfterMutation,
       restoreOnError: () => refreshLoggedInData(true),
@@ -805,7 +888,9 @@
   }
 
   function handleExportData(): void {
-    exportDataToFile(importExportState, adminData)
+    exportDataToFile(importExportState, adminData, (next) => {
+      importExportState = next
+    })
   }
 
   async function handleImportData(file: File, source: ImportSource, mode: 'replace' | 'merge'): Promise<void> {
@@ -814,6 +899,9 @@
       requestConfirmation,
       applyLoggedInData: (data) => applyLoggedInData(data),
       persistCurrentAdminData,
+      onStateChange: (next) => {
+        importExportState = next
+      },
     })
     if (!importExportState.backupError && importExportState.backupMessage) {
       await refreshAdminDataAfterMutation()
@@ -822,6 +910,7 @@
 
   onMount(() => {
     preferredThemeMode = readPreferredThemeMode()
+    customScriptController = createCustomScriptController(createBrowserCustomScriptHost())
 
     if (typeof window !== 'undefined' && window.matchMedia) {
       prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -841,6 +930,8 @@
     if (mediaQuery && handleSystemThemeChange) {
       mediaQuery.removeEventListener('change', handleSystemThemeChange)
     }
+    // 不 revoke 的话每次重建都会漏一个 blob URL。
+    customScriptController?.destroy()
   })
 </script>
 
@@ -858,9 +949,17 @@
   <div class="app-splash">
     <div class="app-splash-card app-splash-card--loading" role="status" aria-live="polite" aria-busy="true">
       <div class="app-splash-mark" aria-hidden="true">
-        <span></span>
-        <span></span>
-        <span></span>
+        <svg class="app-splash-spinner" viewBox="0 0 50 50">
+          <circle class="ring" cx="25" cy="25" r="20" fill="none" stroke="url(#splash-spinner-grad-boot)" stroke-width="3.5"></circle>
+          <circle class="dot" cx="25" cy="25" r="4.5" fill="#2dd4bf"></circle>
+          <defs>
+            <linearGradient id="splash-spinner-grad-boot" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#38bdf8"></stop>
+              <stop offset="60%" stop-color="#2dd4bf"></stop>
+              <stop offset="100%" stop-color="#bef264"></stop>
+            </linearGradient>
+          </defs>
+        </svg>
       </div>
       <p class="eyebrow">CF-Navs</p>
       <h1>正在加载项目数据...</h1>
@@ -906,6 +1005,19 @@
     {:else if currentView === 'login'}
       <div class="app-splash">
         <div class="app-splash-card">
+          <div class="app-splash-mark" aria-hidden="true">
+            <svg class="app-splash-spinner" viewBox="0 0 50 50">
+              <circle class="ring" cx="25" cy="25" r="20" fill="none" stroke="url(#splash-spinner-grad-login)" stroke-width="3.5"></circle>
+              <circle class="dot" cx="25" cy="25" r="4.5" fill="#2dd4bf"></circle>
+              <defs>
+                <linearGradient id="splash-spinner-grad-login" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#38bdf8"></stop>
+                  <stop offset="60%" stop-color="#2dd4bf"></stop>
+                  <stop offset="100%" stop-color="#bef264"></stop>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
           <p class="eyebrow">CF-Navs</p>
           <h1>请先登录管理员账号</h1>
           <p>当前站点未公开，登录后再加载后台管理界面。</p>
@@ -949,6 +1061,7 @@
         onChangePassword={handleChangePassword}
         onSortCategories={handleSortCategories}
         onSortBookmarks={handleSortBookmarks}
+        onSelectTab={handleAdminTabChange}
         importing={importExportState.importing}
         backupError={importExportState.backupError}
         backupMessage={importExportState.backupMessage}
@@ -959,9 +1072,17 @@
       <div class="app-splash">
         <div class="app-splash-card app-splash-card--loading" role="status" aria-live="polite" aria-busy="true">
           <div class="app-splash-mark" aria-hidden="true">
-            <span></span>
-            <span></span>
-            <span></span>
+            <svg class="app-splash-spinner" viewBox="0 0 50 50">
+              <circle class="ring" cx="25" cy="25" r="20" fill="none" stroke="url(#splash-spinner-grad-admin)" stroke-width="3.5"></circle>
+              <circle class="dot" cx="25" cy="25" r="4.5" fill="#2dd4bf"></circle>
+              <defs>
+                <linearGradient id="splash-spinner-grad-admin" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#38bdf8"></stop>
+                  <stop offset="60%" stop-color="#2dd4bf"></stop>
+                  <stop offset="100%" stop-color="#bef264"></stop>
+                </linearGradient>
+              </defs>
+            </svg>
           </div>
           <p class="eyebrow">CF-Navs</p>
           <h1>正在加载后台...</h1>
@@ -998,7 +1119,7 @@
         error={bookmarkError}
         mode={bookmarkModalMode}
         value={activeBookmark}
-        categories={adminCategories.map((category) => ({ id: category.id, title: category.title }))}
+        categories={getAdminBookmarkCategoryOptions(adminCategories)}
         onSubmit={handleSubmitBookmark}
         onCancel={handleCloseBookmarkModal}
         onDelete={handleDeleteBookmark}
@@ -1015,6 +1136,7 @@
       confirmLabel={confirmDialog?.confirmLabel ?? '确认'}
       cancelLabel={confirmDialog?.cancelLabel ?? '取消'}
       variant={confirmDialog?.variant ?? 'default'}
+      confirmDisabled={confirmDialog?.confirmDisabled ?? false}
       onConfirm={handleConfirmDialogConfirm}
       onCancel={handleConfirmDialogCancel}
     />
