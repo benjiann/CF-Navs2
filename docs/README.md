@@ -8,7 +8,7 @@
 - [完整部署指南](guides/DEPLOYMENT.md)
 - [常见问题排查](guides/TROUBLESHOOTING.md)
 - [Sun-Panel 数据导入](guides/SUNPANEL_IMPORT.md)
-- [浏览器书签 HTML 导入](guides/BROWSER_BOOKMARK_IMPORT.md)
+
 
 ## 技术参考
 
@@ -19,6 +19,10 @@
 - [性能契约](reference/PERFORMANCE_CONTRACT.md)
 - [性能测试](reference/PERFORMANCE_TESTING.md)
 
+## 发布与变更记录
+
+- [变更记录](../CHANGELOG.md)
+
 ## 开发计划与决策记录
 
 `plans/` 保存已完成轮次的计划文档。它们不是待办清单，而是决策记录——说明当初
@@ -27,6 +31,7 @@
 
 - [平台优化（加载 / 安全 / 冗余 / UI / 结构）](plans/PLATFORM_OPTIMIZATION_PLAN.md)
 - [后台管理移动端布局](plans/ADMIN_MOBILE_LAYOUT_PLAN.md)
+- [PR #7 合并检查（私密书签 / 跨分类排序 / 浏览器书签同步）](plans/PR7_MERGE_REVIEW_PLAN.md)
 
 ## 图片
 

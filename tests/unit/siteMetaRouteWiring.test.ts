@@ -24,9 +24,29 @@ describe('site meta route wiring', () => {
     )
   })
 
+  it('covers the nested browser-sync endpoint with CORS middleware', () => {
+    expect(index.indexOf("app.use('/api/browser-sync/*', corsHeaders)")).toBeGreaterThan(
+      index.indexOf("app.use('/api/browser-sync', corsHeaders)"),
+    )
+    expect(index.indexOf("app.use('/api/browser-sync/*', corsHeaders)")).toBeLessThan(
+      index.indexOf("app.route('/api/browser-sync', browserSyncRoutes)"),
+    )
+  })
+
+
   it('never fails the site meta request, falling back to the hostname', () => {
     expect(routes).toContain('hostnameFallbackTitle')
     expect(routes).toContain('SITE_META_DEADLINE_MS')
+  })
+
+  it('resolves manifest icons between html links and the favicon.ico fallback', () => {
+    expect(routes).toContain('extractManifestUrl')
+    expect(routes).toContain('fetchManifestJson')
+    expect(routes).toContain('extractManifestIcons')
+    const manifestAt = routes.indexOf('extractManifestUrl(page.html')
+    const originFaviconAt = routes.indexOf('${fallbackOrigin}/favicon.ico')
+    expect(manifestAt).toBeGreaterThan(0)
+    expect(manifestAt).toBeLessThan(originFaviconAt)
   })
 
   it('wires the blur trigger and the single-instance requestId reset', () => {
