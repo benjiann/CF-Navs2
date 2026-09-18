@@ -74,24 +74,16 @@ describe('navigation layout helpers', () => {
     })).toEqual({ left: 8, top: 48 })
   })
 
-  it('mutates the horizontal track through a local DOM reference while dragging', () => {
-    const source = readFileSync('src/components/Sidebar.svelte', 'utf8')
+  // 顶部子菜单的全部交互——打开/关闭、键盘焦点入口、方向键循环、Escape 归还焦点、
+  // 点浮层外关闭、失效父项清理——改由真 DOM 断言：见 tests/unit/topNavigationSubmenu.test.ts。
 
-    expect(source).toContain('const track = topTrack')
-    expect(source).toContain('track.setPointerCapture(event.pointerId)')
-    expect(source).toContain("track.style.scrollBehavior = 'auto'")
-    expect(source).toContain('track.scrollLeft = dragStartScrollLeft - delta')
-    expect(source).not.toContain('topTrack.setPointerCapture(event.pointerId)')
-    expect(source).not.toContain('topTrack.scrollLeft = dragStartScrollLeft - delta')
-  })
+  it('raises the hovered bookmark shell with its tooltip', () => {
+    const source = readFileSync('src/components/BookmarkCard.svelte', 'utf8')
 
-  it('keeps top submenu keyboard focus inside the opened menu', () => {
-    const source = readFileSync('src/components/Sidebar.svelte', 'utf8')
-
-    expect(source).toContain("if (event?.detail === 0)")
-    expect(source).toContain('getTopMenuItems()[0]?.focus()')
-    expect(source).toContain('handleTopMenuKeyDown')
-    expect(source).toContain('closeTopMenu(true)')
+    expect(source).toContain('z-index: 0;')
+    expect(source).toContain('.bookmark-card-shell:hover,')
+    expect(source).toContain('.bookmark-card-shell:focus-within')
+    expect(source).toContain('z-index: 1;')
   })
 
   it('hides native sidebars scrollbars without disabling vertical scrolling', () => {

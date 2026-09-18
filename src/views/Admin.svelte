@@ -12,10 +12,11 @@
 </script>
 
 <script lang="ts">
-  import type { ChangePasswordReq } from '../../shared/types'
+  import type { BookmarkBatchMoveReq, ChangePasswordReq } from '../../shared/types'
   import AdminSidebar from '../components/AdminSidebar.svelte'
   import AdminPageHeader from '../components/admin/AdminPageHeader.svelte'
   import AdminTabContent from '../components/admin/AdminTabContent.svelte'
+  import type { BackupSelection } from '../lib/appBackup'
   import type { ImportSource } from '../lib/importData'
   import type { SettingsFormValue } from '../lib/appData'
   import type { AdminTab, CategorySortHandler } from '../lib/adminTypes'
@@ -89,6 +90,7 @@
   export let onEditBookmark: ((bookmark: AdminBookmark) => AsyncVoid) | undefined = undefined
   export let onDeleteBookmark: ((bookmark: AdminBookmark) => AsyncVoid) | undefined = undefined
   export let onBatchDeleteBookmarks: ((ids: number[]) => AsyncVoid) | undefined = undefined
+  export let onBatchMoveBookmarks: ((payload: BookmarkBatchMoveReq) => AsyncVoid) | undefined = undefined
   export let onSubmitSettings: ((payload: SettingsFormValue) => AsyncVoid) | undefined = undefined
   export let onChangePassword: ((payload: ChangePasswordReq) => AsyncVoid) | undefined = undefined
   export let onSortCategories: CategorySortHandler | undefined = undefined
@@ -97,9 +99,10 @@
   export let onSelectTab: ((tab: AdminTab) => AsyncVoid) | undefined = undefined
 
   export let importing = false
+  export let exporting = false
   export let backupError = ''
   export let backupMessage = ''
-  export let onExportData: (() => AsyncVoid) | undefined = undefined
+  export let onExportData: ((selection: BackupSelection) => AsyncVoid) | undefined = undefined
   export let onImportData: ((file: File, source: ImportSource, mode: 'replace' | 'merge') => AsyncVoid) | undefined = undefined
 
   let importSource: ImportSource = 'cf-navs'
@@ -151,6 +154,7 @@
       {settingsError}
       {settingsValue}
       {importing}
+      {exporting}
       {backupError}
       {backupMessage}
       bind:importSource
@@ -162,6 +166,7 @@
       {onEditBookmark}
       {onDeleteBookmark}
       {onBatchDeleteBookmarks}
+      {onBatchMoveBookmarks}
       {onSubmitSettings}
       {onChangePassword}
       {onSortCategories}

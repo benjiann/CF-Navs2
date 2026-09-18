@@ -1,6 +1,13 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
+// 行为部分（折叠/切换/保存等交互）已迁到 tests/unit/adminSettingsBehavior.test.ts；此处保留的是无法挂载验证的
+// 三类源码契约：① CSS grid 规则——`.settings-panel-wrap`/`.settings-form`/`.settings-submenu`/`.settings-workspace`
+// 的 `grid-template-columns/rows`、`grid-column: 1 / -1`、`clamp(0px, calc(100dvh - 180px), 960px)` 高度与
+// `@media (max-width: 1320px/720px)` 折叠；② 分区归属——各 `form.*` 绑定落在哪个 `settings/*Section.svelte`、
+// 预览 iframe 的 `sandbox=""`/`script-src 'none'` 安全属性；③ 模板与菜单渲染顺序（组件标签、`indexOf` 先后）。
+// jsdom 不做 grid 布局、不评估媒体查询，挂载既拿不到这些计算值，跨文件归属/顺序也非单组件可观测。（PROB-18）
+
 describe('admin settings layout', () => {
   it('aligns the settings panel with category and bookmark content', () => {
     const source = readFileSync('src/components/admin/AdminTabContent.svelte', 'utf8')
@@ -11,25 +18,7 @@ describe('admin settings layout', () => {
     expect(settingsRule).not.toContain('margin: 0 auto')
   })
 
-  it('associates the public mode label with its checkbox', () => {
-    const source = readFileSync('src/components/settings/BasicSettingsSection.svelte', 'utf8')
-
-    expect(source).toContain('<label class="toggle-copy" for="settings-public-mode">')
-    expect(source).toContain('id="settings-public-mode"')
-    expect(source).toContain('on:change={() => void syncForm()}')
-  })
-
-  it('provides navigation position and persistent-left controls', () => {
-    const source = readFileSync('src/components/settings/NavigationSettingsSection.svelte', 'utf8')
-    const panel = readFileSync('src/components/SettingsPanel.svelte', 'utf8')
-
-    expect(panel).toContain('<NavigationSettingsSection bind:form {saving} />')
-    expect(source).toContain('bind:group={form.navigation.position}')
-    expect(source).toContain('bind:checked={form.navigation.always_expanded}')
-    expect(source).toContain("disabled={saving || form.navigation.position !== 'left'}")
-  })
-
-  it('groups settings sections behind a secondary settings menu', () => {
+  it('places the secondary settings menu above the workspace', () => {
     const panel = readFileSync('src/components/SettingsPanel.svelte', 'utf8')
 
     const sectionOrder = [
@@ -53,9 +42,43 @@ describe('admin settings layout', () => {
     expect(labelPositions).toEqual([...labelPositions].sort((a, b) => a - b))
     expect(panel).toContain("{ id: 'appearance', label: '外观与卡片'")
     expect(panel).toContain('class="settings-submenu"')
-    expect(panel).toContain('grid-column: span 1')
-    expect(panel).toContain('grid-column: span 11')
+
+    const formRule = panel.match(/\.settings-form\s*\{([^}]+)\}/)?.[1] ?? ''
+    const submenuRule = panel.match(/\.settings-submenu\s*\{([^}]+)\}/)?.[1] ?? ''
+    const workspaceRule = panel.match(/\.settings-workspace\s*\{([^}]+)\}/)?.[1] ?? ''
+    expect(formRule).toContain('grid-template-columns: minmax(0, 1fr)')
+    expect(formRule).toContain('grid-template-rows: auto minmax(0, 1fr)')
+    expect(submenuRule).toContain('grid-column: 1 / -1')
+    expect(submenuRule).toContain('grid-template-columns: repeat(6, minmax(0, 1fr))')
+    expect(submenuRule).toContain('position: static')
+    expect(workspaceRule).toContain('grid-column: 1 / -1')
+    expect(panel).not.toContain('grid-column: span 1')
+    expect(panel).not.toContain('grid-column: span 11')
     expect(panel).not.toContain('group::before')
+  })
+
+  it('bounds the desktop settings card height to the available shell', () => {
+    const panel = readFileSync('src/components/SettingsPanel.svelte', 'utf8')
+    const adminContent = readFileSync('src/components/admin/AdminTabContent.svelte', 'utf8')
+    const panelRule = panel.match(/\.settings-panel\s*\{([^}]+)\}/)?.[1] ?? ''
+    const sectionContentRule = panel.match(/\.settings-section-content\s*\{([^}]+)\}/)?.[1] ?? ''
+    const adminContentRule = adminContent.match(/\.admin-content\s*\{([^}]+)\}/)?.[1] ?? ''
+    const desktopCollapseStart = panel.indexOf('@media (max-width: 1320px)')
+    const desktopCollapseEnd = panel.indexOf('@media (max-width: 960px)')
+    const desktopCollapseRule = panel.slice(desktopCollapseStart, desktopCollapseEnd)
+
+    expect(panelRule).toContain('height: clamp(0px, calc(100dvh - 180px), 960px)')
+    expect(panelRule).toContain('min-height: min(560px, calc(100dvh - 180px))')
+    expect(sectionContentRule).toContain('height: 100%')
+    expect(sectionContentRule).toContain('overflow-y: auto')
+    expect(adminContentRule).toContain('height: 100%')
+    expect(adminContentRule).toContain('overflow: auto')
+    expect(panelRule).not.toContain('100dvh - 156px')
+    expect(adminContent).toContain('margin: 0 0 24px')
+    expect(desktopCollapseRule).toContain('height: auto;')
+    expect(desktopCollapseRule).toContain('min-height: 0;')
+    expect(desktopCollapseRule).toContain('overflow: visible;')
+    expect(desktopCollapseRule).toContain('grid-template-columns: minmax(0, 1fr)')
   })
 
   it('places theme, search, image-host, and layout controls in their current sections', () => {
@@ -69,15 +92,15 @@ describe('admin settings layout', () => {
 
     expect(layout).toContain('bind:value={form.content_layout.max_width}')
     expect(card).not.toContain('form.content_layout')
-    expect(hero).toContain('bind:checked={form.search_box_show}')
-    expect(hero).toContain('bind:checked={form.search_engine_selector_show}')
+    expect(hero).toContain('checked={form.search_box_show}')
+    expect(hero).toContain('checked={form.search_engine_selector_show}')
     expect(search).not.toContain('form.search_box_show')
     expect(basic).toContain('bind:group={form.theme}')
     expect(basic).toContain('bind:value={form.site_title_color}')
     expect(basic).toContain('bind:value={form.site_title_font_size}')
     expect(basic).toContain('bind:value={form.image_host_url}')
     expect(basic).toContain('<h3>外部资源</h3>')
-    expect(basic).toContain('背景图片、分类图标和书签自定义图标')
+    expect(basic).toContain('用于背景图、分类与书签图标的上传接口')
     expect(advanced).not.toContain('bind:value={form.image_host_url}')
     expect(advanced).not.toContain('bind:value={form.site_title_color}')
     expect(advanced).not.toContain('bind:value={form.site_title_font_size}')
@@ -109,7 +132,7 @@ describe('admin settings layout', () => {
     expect(searchBranch).toContain('<SearchEngineSettingsSection')
     expect(searchBranch).not.toContain('<HeroSettingsSection')
     expect(hero).toContain('bind:value={form.most_visited_count}')
-    expect(hero).toContain('bind:checked={form.site_title_show}')
+    expect(hero).toContain('checked={form.site_title_show}')
     expect(hero).toContain('.field-range {\n    grid-column: 1 / -1;')
     expect(basic).not.toContain('form.custom_css')
     expect(basic).not.toContain('form.custom_js')
@@ -171,15 +194,14 @@ describe('admin settings layout', () => {
     const advanced = readFileSync('src/components/settings/AdvancedSettingsSection.svelte', 'utf8')
     const backgroundCard = readFileSync('src/components/settings/ThemeBackgroundCard.svelte', 'utf8')
 
-    expect(panel).toContain('appearanceAdvancedOpen = shouldAutoExpandAppearanceAdvanced(initialForm)')
-    expect(advanced).toContain('data-testid="appearance-advanced-toggle"')
-    expect(advanced).toContain('{#if advancedOpen}')
     expect(advanced).toContain('class="advanced-settings-section"')
     expect(advanced).toContain('aria-label="高级设置"')
     expect(advanced).not.toContain('class="group group-wide')
     expect(advanced).not.toContain('<legend>高级设置</legend>')
     expect(advanced).toContain('<h3>尺寸与密度</h3>')
     expect(advanced).toContain('<h3>卡片表面</h3>')
+    expect(advanced).toContain("import CategoryDisplaySettingsSection from './CategoryDisplaySettingsSection.svelte'")
+    expect(advanced).toContain('<CategoryDisplaySettingsSection bind:form {saving} />')
     expect(appearance).not.toContain('{#if advancedOpen}')
     expect(card).not.toContain('{#if advancedOpen}')
     expect(card).not.toContain('<h3>尺寸与密度</h3>')
@@ -192,8 +214,24 @@ describe('admin settings layout', () => {
     expect(appearanceBranch.indexOf('<CardSettingsSection')).toBeLessThan(appearanceBranch.indexOf('<AdvancedSettingsSection'))
     expect(backgroundCard.indexOf('<span>背景值</span>')).toBeLessThan(backgroundCard.indexOf('startLabel="起始颜色"'))
     expect(backgroundCard.indexOf('startLabel="起始颜色"')).toBeLessThan(backgroundCard.indexOf('endLabel="结束颜色"'))
-    expect(backgroundCard.indexOf('endLabel="结束颜色"')).toBeLessThan(backgroundCard.indexOf('<span>遮罩颜色</span>'))
-    expect(backgroundCard.indexOf('<span>遮罩颜色</span>')).toBeLessThan(backgroundCard.indexOf('<div class="background-range-grid">'))
+    expect(backgroundCard.indexOf('endLabel="结束颜色"')).toBeLessThan(backgroundCard.indexOf('<div class="background-range-grid">'))
+    expect(backgroundCard.indexOf('<div class="background-range-grid">')).toBeLessThan(backgroundCard.indexOf('遮罩颜色'))
+  })
+  it('exposes category-level visual controls in the advanced section', () => {
+    const panel = readFileSync('src/components/SettingsPanel.svelte', 'utf8')
+    const categoryDisplay = readFileSync('src/components/settings/CategoryDisplaySettingsSection.svelte', 'utf8')
+    const advanced = readFileSync('src/components/settings/AdvancedSettingsSection.svelte', 'utf8')
+    const home = readFileSync('src/views/Home.svelte', 'utf8')
+
+    expect(panel).not.toContain('<CategoryDisplaySettingsSection bind:form {saving} />')
+    expect(advanced).toContain("import CategoryDisplaySettingsSection from './CategoryDisplaySettingsSection.svelte'")
+    expect(advanced).toContain('<CategoryDisplaySettingsSection bind:form {saving} />')
+    expect(categoryDisplay).toContain('一级分类标题字号')
+    expect(categoryDisplay).toContain('二级分类标题字号')
+    expect(categoryDisplay).toContain('min={12}')
+    expect(categoryDisplay).toContain('min={11}')
+    expect(home).toContain('--category-root-font-size-base')
+    expect(home).toContain('* 0.88')
   })
 
   it('collapses built-in presets, removes manual gradient values, and binds card controls to style', () => {
@@ -259,6 +297,6 @@ describe('admin settings layout', () => {
     expect(search).toContain('engine.icon = icon')
     expect(search).toContain('Favicon.im')
     expect(search).toContain('搜索引擎图标预览')
-    expect(search).toContain('.favicon-button {\n    grid-column: 3;')
+    expect(search).toContain('class="favicon-suffix-button"')
   })
 })

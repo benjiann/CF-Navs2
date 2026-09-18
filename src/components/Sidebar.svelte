@@ -20,9 +20,10 @@
 
   export let items: NavigationItem[] = []
   export let activeId: string | number | null = null
-  export let navigation: NavigationSetting = { position: 'left', always_expanded: false }
+  export let navigation: NavigationSetting = { position: 'left', always_expanded: false, top_layout: 'scroll' }
   export let onNavigate: ((id: string | number) => void) | undefined = undefined
   export let onPersistentExpansionChange: ((expanded: boolean) => void) | undefined = undefined
+  export let onTopNavHeightChange: ((height: number) => void) | undefined = undefined
 
   const MOBILE_WIDTH = 800
   const DRAG_THRESHOLD_PX = 6
@@ -59,6 +60,8 @@
   let topMenuElement: HTMLElement | null = null
 
   $: isTop = navigation.position === 'top'
+  // 分行仅在桌面/宽屏生效；移动端强制横向滚动（FR-B7）。
+  $: isWrap = isTop && navigation.top_layout === 'wrap' && !isMobileView
   $: isPersistentLeft = !isTop && !isMobileView && navigation.always_expanded
   $: isExpanded = isMobileView
     ? mobileSidebarOpen
@@ -101,6 +104,12 @@
   ))?.id
 
   $: if (isTop || activeParentId == null) revealedActiveParentId = ''
+
+  $: if (openTopMenuId && (!isTop || !items.some((item) => (
+    String(item.id) === openTopMenuId && Boolean(item.children?.length)
+  )))) {
+    closeTopMenu()
+  }
 
   $: if (!isTop && activeParentId != null && String(activeParentId) !== revealedActiveParentId) {
     revealedActiveParentId = String(activeParentId)
@@ -185,6 +194,7 @@
   }
 
   function toggleParent(item: NavigationItem, event?: MouseEvent): void {
+    if (!item.children?.length) return
     const id = String(item.id)
     if (isTop) {
       if (openTopMenuId === id) {
@@ -258,6 +268,23 @@
     updateTopMenuPosition()
   }
 
+  function handleTopTrackWheel(event: WheelEvent): void {
+    if (isWrap || !topTrack) return
+
+    const track = topTrack
+    if (track.scrollWidth <= track.clientWidth) return
+
+    const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
+    if (delta === 0) return
+
+    const maxScrollLeft = track.scrollWidth - track.clientWidth
+    const nextScrollLeft = Math.min(maxScrollLeft, Math.max(0, track.scrollLeft + delta))
+    if (nextScrollLeft === track.scrollLeft) return
+
+    event.preventDefault()
+    track.scrollLeft = nextScrollLeft
+  }
+
   function handleDocumentPointerDown(event: PointerEvent): void {
     if (openTopMenuId && navigationRoot && !navigationRoot.contains(event.target as Node)) {
       closeTopMenu()
@@ -286,12 +313,17 @@
     canScrollLeft = metrics.canScrollLeft
     canScrollRight = metrics.canScrollRight
   }
+  function reportTopNavHeight(): void {
+    if (!isTop || !navigationRoot) return
+    onTopNavHeightChange?.(navigationRoot.getBoundingClientRect().height)
+  }
 
   function scheduleOverflowUpdate(): void {
     if (overflowFrame != null) cancelAnimationFrame(overflowFrame)
     overflowFrame = requestAnimationFrame(() => {
       overflowFrame = null
       updateOverflowState()
+      reportTopNavHeight()
     })
   }
 
@@ -316,7 +348,7 @@
   }
 
   function handlePointerDown(event: PointerEvent): void {
-    if (!topTrack || event.pointerType !== 'mouse' || event.button !== 0) return
+    if (isWrap || !topTrack || event.pointerType !== 'mouse' || event.button !== 0) return
     clearClickSuppression()
     dragging = false
     dragPointerId = event.pointerId
@@ -374,13 +406,23 @@
     if (typeof ResizeObserver !== 'undefined') {
       resizeObserver = new ResizeObserver(scheduleOverflowUpdate)
       if (topTrack) resizeObserver.observe(topTrack)
+      if (navigationRoot) resizeObserver.observe(navigationRoot)
     }
     updateOverflowState()
+    reportTopNavHeight()
   })
 
   $: if (resizeObserver && topTrack) {
     resizeObserver.disconnect()
     resizeObserver.observe(topTrack)
+    if (navigationRoot) resizeObserver.observe(navigationRoot)
+  }
+
+  // 分行开关/项数变化后，等布局稳定再上报顶部导航高度，供首页调整留白。
+  $: if (isTop) {
+    void isWrap
+    void items.length
+    void tick().then(reportTopNavHeight)
   }
 
   onDestroy(() => {
@@ -396,11 +438,11 @@
 </script>
 
 {#if isTop}
-  <aside class="top-navigation" bind:this={navigationRoot} data-testid="top-navigation" aria-label="分类导航">
+  <aside class="top-navigation" class:wrap={isWrap} bind:this={navigationRoot} data-testid="top-navigation" aria-label="分类导航">
     <button
       type="button"
       class="scroll-arrow scroll-arrow-left"
-      class:hidden={!overflow}
+      class:hidden={!overflow || isWrap}
       disabled={!canScrollLeft}
       on:click={() => scrollTopTrack(-1)}
       aria-label="向左滚动分类"
@@ -411,9 +453,11 @@
 
     <nav
       class="top-track"
+      class:wrap={isWrap}
       class:dragging
       bind:this={topTrack}
       on:scroll={handleTopTrackScroll}
+      on:wheel={handleTopTrackWheel}
       on:pointerdown={handlePointerDown}
       on:pointermove={handlePointerMove}
       on:pointerup={finishPointerDrag}
@@ -430,7 +474,7 @@
             on:click={() => handleItemClick(item.id)}
           >
             {#if item.icon}
-              <CategoryIcon category={getCategoryIconValue(item)} size={22} className="top-category-icon" />
+              <CategoryIcon category={getCategoryIconValue(item)} size="var(--category-root-icon-size, 22px)" className="top-category-icon" />
             {/if}
             <span>{item.title}</span>
             {#if item.count != null}<small>{item.count}</small>{/if}
@@ -453,7 +497,7 @@
     <button
       type="button"
       class="scroll-arrow scroll-arrow-right"
-      class:hidden={!overflow}
+      class:hidden={!overflow || isWrap}
       disabled={!canScrollRight}
       on:click={() => scrollTopTrack(1)}
       aria-label="向右滚动分类"
@@ -484,7 +528,7 @@
             >
               <span class="top-submenu-title">
                 {#if child.icon}
-                  <CategoryIcon category={getCategoryIconValue(child)} size={22} className="top-submenu-icon" />
+                  <CategoryIcon category={getCategoryIconValue(child)} size="var(--category-child-icon-size, 22px)" className="top-submenu-icon" />
                 {/if}
                 <span>{child.title}</span>
               </span>
@@ -552,7 +596,7 @@
             >
               {#if item.icon}
                 <span class="toc-icon-slot">
-                  <CategoryIcon category={getCategoryIconValue(item)} size={26} className="toc-category-icon" />
+                  <CategoryIcon category={getCategoryIconValue(item)} size="var(--category-root-icon-size, 26px)" className="toc-category-icon" />
                 </span>
               {:else}
                 <span class="toc-slip"></span>
@@ -585,7 +629,7 @@
                 >
                   <span class="toc-child-title">
                     {#if child.icon}
-                      <CategoryIcon category={getCategoryIconValue(child)} size={21} className="toc-child-icon" />
+                      <CategoryIcon category={getCategoryIconValue(child)} size="var(--category-child-icon-size, 21px)" className="toc-child-icon" />
                     {/if}
                     <span>{child.title}</span>
                   </span>
@@ -613,7 +657,7 @@
     --toc-text: var(--home-text-color, #0f172a);
     --toc-accent: var(--home-accent-color, #2563eb);
     --toc-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
-    --toc-slip: rgba(15, 23, 42, 0.72);
+    --toc-slip: rgba(248, 250, 252, 0.9);
   }
 
   :global([data-theme='dark']) .toc-mobile-btn,
@@ -676,6 +720,23 @@
     -webkit-backdrop-filter: blur(16px);
   }
 
+  /* 分行显示（桌面/宽屏）：高度自适应、允许换行、去掉横向滚动交互 */
+  .top-navigation.wrap {
+    height: auto;
+    min-height: 52px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .top-track.wrap {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    overflow-y: visible;
+    cursor: default;
+    touch-action: auto;
+    user-select: auto;
+    row-gap: 6px;
+  }
+
   .top-track {
     min-width: 0;
     display: flex;
@@ -726,7 +787,7 @@
     background: transparent;
     color: var(--toc-text);
     font: inherit;
-    font-size: 14px;
+    font-size: var(--category-root-font-size, 14px);
     white-space: nowrap;
     cursor: pointer;
   }
@@ -750,10 +811,15 @@
 
   .top-item :global(.top-category-icon),
   .top-submenu-title :global(.top-submenu-icon) {
-    width: 22px;
-    height: 22px;
-    min-width: 22px;
+    width: var(--category-root-icon-size, 22px);
+    height: var(--category-root-icon-size, 22px);
+    min-width: var(--category-root-icon-size, 22px);
     border-radius: 6px;
+  }
+  .top-submenu-title :global(.top-submenu-icon) {
+    width: var(--category-child-icon-size, 22px);
+    height: var(--category-child-icon-size, 22px);
+    min-width: var(--category-child-icon-size, 22px);
   }
 
   .top-submenu-toggle {
@@ -804,7 +870,7 @@
     padding: 0 10px;
     background: transparent;
     color: var(--toc-text);
-    text-align: left;
+    font-size: var(--category-child-font-size, 14px);
     cursor: pointer;
   }
 
@@ -1045,6 +1111,7 @@
     padding: 0 8px;
     background: transparent;
     color: var(--toc-text);
+    font-size: var(--category-child-font-size, 14px);
     text-align: left;
     cursor: pointer;
   }
@@ -1073,9 +1140,9 @@
   }
 
   .toc-child-title :global(.toc-child-icon) {
-    width: 21px;
-    height: 21px;
-    min-width: 21px;
+    width: var(--category-child-icon-size, 21px);
+    height: var(--category-child-icon-size, 21px);
+    min-width: var(--category-child-icon-size, 21px);
     border-radius: 6px;
   }
 
@@ -1108,8 +1175,13 @@
     transform: scaleX(1);
   }
 
+  .toc-sidebar.expanded .toc-item:not(.active) .toc-slip {
+    background: transparent;
+  }
+
   .toc-item.active .toc-slip {
     background: var(--toc-accent);
+    transform: scaleX(1);
   }
 
   .toc-icon-slot {
@@ -1122,9 +1194,9 @@
   }
 
   .toc-icon-slot :global(.toc-category-icon) {
-    width: 26px;
-    height: 26px;
-    min-width: 26px;
+    width: var(--category-root-icon-size, 26px);
+    height: var(--category-root-icon-size, 26px);
+    min-width: var(--category-root-icon-size, 26px);
     border-radius: 7px;
     transition: border-color var(--transition-base), transform var(--transition-base);
   }
@@ -1166,10 +1238,16 @@
     }
 
     .top-track {
+      width: 100%;
+      justify-self: start;
+      box-sizing: border-box;
       gap: 4px;
       cursor: auto;
       scroll-snap-type: x proximity;
       -webkit-overflow-scrolling: touch;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overflow-y: hidden;
     }
 
     .top-item {
