@@ -38,7 +38,7 @@
   export let showDescription: boolean = true
   export let descriptionMode: DescriptionDisplayMode = showDescription ? 'always' : 'hidden'
   export let showIconTitle: boolean = true
-  export let width: number = 200
+  export let width: number = 160
   export let height: number = 0
   export let canEdit = false
   export let sortMode = false
@@ -533,7 +533,7 @@
 
   .bookmark-card-shell.is-info {
     width: 100%;
-    min-width: var(--card-configured-min-width, 200px);
+    min-width: var(--card-configured-min-width, 160px);
   }
 
   .bookmark-card-shell.is-icon {

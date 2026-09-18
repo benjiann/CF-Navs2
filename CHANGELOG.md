@@ -7,6 +7,11 @@
 
 ## [Unreleased]
 
+### 详情卡片列宽缺失回退补齐到 160px（refs #22）
+
+- v0.5.1 只把数据层默认（schema seed、`CARD_SIZE_DEFAULTS`、Home 兜底）改为 160px，组件与 CSS 层仍残留 200px 兜底：`CategorySection` / `BookmarkCard` 的 width prop 默认、两张卡片的网格与外壳 CSS fallback、`getInfoCardTrackWidth` 的非有限输入回落。本轮把这 5 处全部统一到 160px，使首次部署或缺失设置时详情卡列宽下限与共享默认一致；用户显式保存的宽度不迁移。
+- 验证：L0 类型检查 0 errors / 0 warnings、`npm test` 120 files / 898 tests 全通过、生产构建成功。
+
 ## v0.5.1 — 2026-09-18
 
 问题处理与优化补丁版本。恢复首页书签图标本地优先缓存并补齐部署验证；修复分类/Iconify 图标与搜索在瞬时失败下的恢复、SPA 资产重定向边界、编辑后提示误报「已创建」、详情卡片列宽控件命名；同步 README 与站点截图。部署来源为 `develop`。
